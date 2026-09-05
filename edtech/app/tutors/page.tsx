@@ -1,4 +1,4 @@
-"use client";
+git add"use client";
 
 import { useState } from "react";
 import {
@@ -13,6 +13,7 @@ import {
 import Link from "next/link";
 import { useUser } from "@/context/user-context";
 import { formatUgx } from "@/lib/currency";
+import FeedbackPanel from "@/components/FeedbackPanel";
 
 export interface Tutor {
   id: string;
@@ -494,7 +495,13 @@ export default function TutorsPage() {
         </div>
       )}
 
+<<<<<<< HEAD
       {/* ── TUTOR BOOKING MODAL ──────────────────────────────────────────────── */}
+=======
+      <FeedbackPanel />
+
+      {/* ── TUTOR BOOKING MODAL matching Visual Plan #5 Right ───────────────── */}
+>>>>>>> 1db5e7a (adding the feedback panel)
       {bookingTutor && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
           <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
