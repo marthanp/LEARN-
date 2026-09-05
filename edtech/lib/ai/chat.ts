@@ -31,7 +31,8 @@ function getGeminiApiKey() {
 async function generateGeminiResponse(
   message: string,
   subject: string,
-  history: ChatMessage[]
+  history: ChatMessage[],
+  learningContext?: string
 ) {
   const apiKey = getGeminiApiKey();
   if (!apiKey) throw new Error("GEMINI_API_KEY is not configured on the server.");
@@ -56,7 +57,7 @@ async function generateGeminiResponse(
         systemInstruction: {
           parts: [
             {
-              text: `You are a patient, accurate academic tutor. The student's selected subject is ${subject}. Answer the student's actual question directly and explain your reasoning at an appropriate student level. Only answer questions that are meaningfully related to ${subject}. If the question is outside ${subject}, politely say that you can only help with ${subject} and invite the student to ask a ${subject} question. Do not pretend an unrelated question is part of ${subject}. Use plain text and readable sections; use LaTeX only when it genuinely helps with mathematics or science.`,
+              text: `You are a patient, accurate academic tutor. The student's selected subject is ${subject}.${learningContext ? ` The learner opened this library context: ${learningContext}.` : ""} Answer the student's actual question directly and explain your reasoning at an appropriate student level. Only answer questions that are meaningfully related to ${subject}. If the question is outside ${subject}, politely say that you can only help with ${subject} and invite the student to ask a ${subject} question. Do not pretend an unrelated question is part of ${subject}. Do not claim that an answer is NCDC-based unless supplied learning content supports that claim. Use plain text and readable sections; use LaTeX only when it genuinely helps with mathematics or science.`,
             },
           ],
         },
@@ -164,7 +165,8 @@ export async function sendStudyMessage(
   chatId: string,
   message: string,
   history: ChatMessage[] = [],
-  subject = "General Studies"
+  subject = "General Studies",
+  learningContext?: string
 ): Promise<SendMessageResult> {
   let activeChatId = chatId;
   // Persistence is optional for the local demo; AI responses should still work without a signed-in user.
@@ -197,7 +199,7 @@ export async function sendStudyMessage(
   }
 
   try {
-    const reply = await generateGeminiResponse(message, subject, history);
+    const reply = await generateGeminiResponse(message, subject, history, learningContext);
 
     if (activeChatId) {
       try {

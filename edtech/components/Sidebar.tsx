@@ -41,10 +41,10 @@ const LEARNER_NAV = {
   sectionDot: "bg-indigo-400",
   items: [
     { href: "/learner/dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { href: "/marketplace",       label: "Marketplace",        subLabel: "Books & UNEB Papers", icon: BookOpen },
+    { href: "/marketplace",       label: "LEARN+ Library",     subLabel: "Uganda curriculum resources", icon: BookOpen },
     { href: "/chat",              label: "AI Study Chatbot",   icon: Bot,          badge: "AI" },
     { href: "/tutors",            label: "Book a Tutor",       icon: Users },
-    { href: "/marketplace",       label: "My Rentals & Requests", icon: Bookmark },
+    { href: "/marketplace?view=borrowed", label: "My Books",       icon: Bookmark },
     { href: "/plans",             label: "Subscriptions",      icon: CreditCard },
   ],
 };

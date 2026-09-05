@@ -117,6 +117,7 @@ export default function ChatPage() {
   const [isTyping, setIsTyping] = useState(false);
   const [selectedSubject, setSelectedSubject] = useState(SUBJECTS[0]);
   const [chatId, setChatId] = useState("");
+  const [learningContext, setLearningContext] = useState("");
   const [speechUrls, setSpeechUrls] = useState<Record<string, string>>({});
   const [speechLoadingId, setSpeechLoadingId] = useState<string | null>(null);
   const [playingMessageId, setPlayingMessageId] = useState<string | null>(null);
@@ -128,6 +129,14 @@ export default function ChatPage() {
     const savedSubject = localStorage.getItem("eduhub_selected_subject");
     if (savedSubject && SUBJECTS.includes(savedSubject)) {
       setSelectedSubject(savedSubject);
+    }
+    const params = new URLSearchParams(window.location.search);
+    const contextSubject = params.get("subject");
+    const level = params.get("level");
+    const resource = params.get("resource");
+    if (contextSubject && SUBJECTS.includes(contextSubject)) setSelectedSubject(contextSubject);
+    if (contextSubject || level || resource) {
+      setLearningContext([level, contextSubject, resource].filter(Boolean).join(" / "));
     }
   }, []);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -182,7 +191,7 @@ export default function ChatPage() {
 
     let result;
     try {
-      result = await sendStudyMessage(chatId, text, history, selectedSubject);
+      result = await sendStudyMessage(chatId, text, history, selectedSubject, learningContext);
     } catch (error) {
       result = {
         chatId,
@@ -330,6 +339,12 @@ export default function ChatPage() {
               </div>
             </div>
           </div>
+
+          {learningContext && (
+            <span className="hidden max-w-56 truncate rounded-full bg-emerald-50 px-3 py-1 text-[10px] font-semibold text-emerald-700 sm:inline-block" title={learningContext}>
+              Library context: {learningContext}
+            </span>
+          )}
 
           <div className="flex items-center gap-2">
             <span className="text-[11px] font-semibold text-slate-500">
