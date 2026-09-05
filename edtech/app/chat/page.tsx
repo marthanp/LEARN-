@@ -117,26 +117,18 @@ export default function ChatPage() {
   const [isTyping, setIsTyping] = useState(false);
   const [selectedSubject, setSelectedSubject] = useState(SUBJECTS[0]);
   const [chatId, setChatId] = useState("");
-  const [learningContext, setLearningContext] = useState("");
   const [speechUrls, setSpeechUrls] = useState<Record<string, string>>({});
   const [speechLoadingId, setSpeechLoadingId] = useState<string | null>(null);
   const [playingMessageId, setPlayingMessageId] = useState<string | null>(null);
   const [speechError, setSpeechError] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const speechUrlsRef = useRef<Record<string, string>>({});
+  const chatSessionRef = useRef(0);
 
   useEffect(() => {
     const savedSubject = localStorage.getItem("eduhub_selected_subject");
     if (savedSubject && SUBJECTS.includes(savedSubject)) {
       setSelectedSubject(savedSubject);
-    }
-    const params = new URLSearchParams(window.location.search);
-    const contextSubject = params.get("subject");
-    const level = params.get("level");
-    const resource = params.get("resource");
-    if (contextSubject && SUBJECTS.includes(contextSubject)) setSelectedSubject(contextSubject);
-    if (contextSubject || level || resource) {
-      setLearningContext([level, contextSubject, resource].filter(Boolean).join(" / "));
     }
   }, []);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -160,12 +152,28 @@ export default function ChatPage() {
     };
   }, []);
 
+  const startNewChat = () => {
+    chatSessionRef.current += 1;
+    audioRef.current?.pause();
+    Object.values(speechUrlsRef.current).forEach((url) => URL.revokeObjectURL(url));
+    setMessages([]);
+    setInput("");
+    setChatId("");
+    setIsTyping(false);
+    setSpeechUrls({});
+    setSpeechLoadingId(null);
+    setPlayingMessageId(null);
+    setSpeechError(null);
+  };
+
   const maxMessages = user.subscriptionTier === "free" ? 5 : user.subscriptionTier === "plus" ? 50 : 999999;
   const isLimitReached = aiMessagesCount >= maxMessages && user.subscriptionTier === "free";
 
   const handleSend = async (textToSend?: string) => {
     const text = textToSend || input.trim();
     if (!text || isTyping) return;
+
+    const chatSession = chatSessionRef.current;
 
     if (isLimitReached) {
       alert("You have reached your daily Free tier limit (5 queries). Upgrade to Plus or Pro for more!");
@@ -191,7 +199,7 @@ export default function ChatPage() {
 
     let result;
     try {
-      result = await sendStudyMessage(chatId, text, history, selectedSubject, learningContext);
+      result = await sendStudyMessage(chatId, text, history, selectedSubject);
     } catch (error) {
       result = {
         chatId,
@@ -199,6 +207,9 @@ export default function ChatPage() {
         error: error instanceof Error ? error.message : "Unable to contact the AI service.",
       };
     }
+
+    if (chatSession !== chatSessionRef.current) return;
+
     const botMsg: ChatMessage = {
       id: `ai_${Date.now()}`,
       sender: "assistant",
@@ -270,8 +281,7 @@ export default function ChatPage() {
         <div className="space-y-4">
           <button
             onClick={() => {
-              setMessages(INITIAL_MESSAGES);
-              setChatId("");
+              startNewChat();
               resetAiMessages();
             }}
             className="w-full py-2.5 px-4 rounded-xl bg-[#4F46E5] hover:bg-[#4338CA] text-white text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer"
@@ -326,7 +336,7 @@ export default function ChatPage() {
                     const nextSubject = e.target.value;
                     localStorage.setItem("eduhub_selected_subject", nextSubject);
                     setSelectedSubject(nextSubject);
-                    window.location.reload();
+                    startNewChat();
                   }}
                   className="text-xs font-semibold text-[#4F46E5] bg-transparent border-none focus:outline-none cursor-pointer"
                 >
@@ -339,12 +349,6 @@ export default function ChatPage() {
               </div>
             </div>
           </div>
-
-          {learningContext && (
-            <span className="hidden max-w-56 truncate rounded-full bg-emerald-50 px-3 py-1 text-[10px] font-semibold text-emerald-700 sm:inline-block" title={learningContext}>
-              Library context: {learningContext}
-            </span>
-          )}
 
           <div className="flex items-center gap-2">
             <span className="text-[11px] font-semibold text-slate-500">
