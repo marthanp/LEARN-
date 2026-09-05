@@ -169,7 +169,9 @@ export async function sendStudyMessage(
   let activeChatId = chatId;
   // Persistence is optional for the local demo; AI responses should still work without a signed-in user.
   try {
-    const supabase = await createClient();
+    // The local Database scaffold is intentionally not generated from a live project yet.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = (await createClient()) as any;
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -201,7 +203,8 @@ export async function sendStudyMessage(
 
     if (activeChatId) {
       try {
-        const supabase = await createClient();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const supabase = (await createClient()) as any;
         await supabase.from("ai_messages").insert({
           chat_id: activeChatId,
           sender: "assistant",

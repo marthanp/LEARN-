@@ -11,6 +11,35 @@ export type SubscriptionTier = "free" | "plus" | "pro";
 export type RentalStatus     = "active" | "returned";
 export type BookingStatus    = "pending" | "confirmed" | "completed";
 export type MessageSender    = "user" | "assistant";
+export type QuestionType = "multiple_choice" | "true_false" | "short_answer" | "long_text";
+export type ExamAttemptStatus = "in_progress" | "submitted" | "expired";
+export type ExamResultStatus = "in_progress" | "submitted" | "marking" | "marked" | "marking_failed";
+export type AnswerResultStatus = "correct" | "partially_correct" | "incorrect";
+
+export interface ExamQuestion {
+  id: string;
+  question_number: number;
+  question_text: string;
+  question_type: QuestionType;
+  marks: number;
+  options: string[];
+  correct_answer: string | null;
+  rubric: string | null;
+  topic: string | null;
+}
+
+export interface ExamSummary {
+  id: string;
+  title: string;
+  subject: string;
+  description: string;
+  duration_minutes: number;
+  starts_at: string;
+  closes_at: string;
+  total_marks: number;
+  published: boolean;
+  status?: "upcoming" | "available" | "completed";
+}
 
 export interface Database {
   public: {
@@ -112,6 +141,15 @@ export interface Database {
         Insert: Omit<Database["public"]["Tables"]["ai_messages"]["Row"], "id" | "created_at">;
         Update: Partial<Database["public"]["Tables"]["ai_messages"]["Insert"]>;
       };
+      exams: { Row: ExamSummary & { created_by: string; created_at: string; updated_at: string }; Insert: Omit<ExamSummary, "id" | "published"> & { created_by: string; published?: boolean }; Update: Partial<Database["public"]["Tables"]["exams"]["Insert"]> };
+      exam_questions: { Row: ExamQuestion & { exam_id: string }; Insert: Omit<ExamQuestion, "id"> & { exam_id: string }; Update: Partial<Database["public"]["Tables"]["exam_questions"]["Insert"]> };
+      exam_attempts: { Row: { id: string; exam_id: string; learner_id: string; started_at: string; due_at: string; submitted_at: string | null; status: ExamAttemptStatus; result_status: ExamResultStatus; marks_obtained: number | null; maximum_marks: number | null; percentage: number | null; created_at: string }; Insert: Omit<Database["public"]["Tables"]["exam_attempts"]["Row"], "id" | "created_at" | "submitted_at" | "marks_obtained" | "maximum_marks" | "percentage">; Update: Partial<Database["public"]["Tables"]["exam_attempts"]["Insert"]> };
+      exam_answers: { Row: { id: string; attempt_id: string; question_id: string; answer_text: string; saved_at: string; marks_awarded: number | null; result_status: AnswerResultStatus | null; feedback: string | null; explanation: string | null }; Insert: Omit<Database["public"]["Tables"]["exam_answers"]["Row"], "id" | "saved_at" | "marks_awarded" | "result_status" | "feedback" | "explanation">; Update: Partial<Database["public"]["Tables"]["exam_answers"]["Insert"]> };
+      exam_results: { Row: { id: string; attempt_id: string; result_status: ExamResultStatus; overall_feedback: string; areas_to_improve: string[]; marked_at: string; marked_by: string }; Insert: Omit<Database["public"]["Tables"]["exam_results"]["Row"], "id" | "marked_at">; Update: Partial<Database["public"]["Tables"]["exam_results"]["Insert"]> };
+      past_papers: { Row: { id: string; subject: string; year: number; examination_name: string; paper_number: string; level: string | null; instructions: string; source_file_path: string | null; published: boolean; created_by: string; created_at: string }; Insert: Omit<Database["public"]["Tables"]["past_papers"]["Row"], "id" | "created_at">; Update: Partial<Database["public"]["Tables"]["past_papers"]["Insert"]> };
+      past_paper_questions: { Row: ExamQuestion & { past_paper_id: string; marking_guide: string | null }; Insert: Omit<Database["public"]["Tables"]["past_paper_questions"]["Row"], "id">; Update: Partial<Database["public"]["Tables"]["past_paper_questions"]["Insert"]> };
+      practice_attempts: { Row: { id: string; past_paper_id: string; learner_id: string; started_at: string; submitted_at: string | null; marks_obtained: number | null; total_marks: number | null; feedback: string; areas_to_improve: string[] }; Insert: Omit<Database["public"]["Tables"]["practice_attempts"]["Row"], "id" | "started_at" | "submitted_at">; Update: Partial<Database["public"]["Tables"]["practice_attempts"]["Insert"]> };
+      practice_answers: { Row: { id: string; attempt_id: string; question_id: string; answer_text: string; marks_awarded: number | null; result_status: AnswerResultStatus | null; feedback: string | null; explanation: string | null }; Insert: Omit<Database["public"]["Tables"]["practice_answers"]["Row"], "id" | "marks_awarded" | "result_status" | "feedback" | "explanation">; Update: Partial<Database["public"]["Tables"]["practice_answers"]["Insert"]> };
     };
   };
 }

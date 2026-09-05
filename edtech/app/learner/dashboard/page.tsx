@@ -16,7 +16,6 @@ import {
   ChevronRight,
   LogOut,
   FileText,
-  Download,
   ExternalLink,
   MessageSquare,
   AlertCircle,
@@ -417,14 +416,13 @@ export default function LearnerDashboardPage() {
               </div>
 
               <div className="flex flex-col gap-1.5 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => alert(`Downloading ${paper.title}...`)}
-                  className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                <Link
+                  href="/learner/past-papers"
+                  className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold flex items-center gap-1 transition-colors text-center"
                 >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>PDF</span>
-                </button>
+                  <FileText className="w-3.5 h-3.5" />
+                  <span>Open in LEARN+</span>
+                </Link>
                 <Link
                   href="/chat"
                   className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-semibold flex items-center gap-1 transition-colors text-center"

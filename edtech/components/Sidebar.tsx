@@ -26,6 +26,7 @@ import {
   ShieldCheck,
   GraduationCap,
   BookMarked,
+  ClipboardCheck,
 } from "lucide-react";
 import { useUser } from "@/context/user-context";
 import { signOutAction } from "@/app/actions/auth";
@@ -41,7 +42,9 @@ const LEARNER_NAV = {
   sectionDot: "bg-indigo-400",
   items: [
     { href: "/learner/dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { href: "/marketplace",       label: "Marketplace",        subLabel: "Books & UNEB Papers", icon: BookOpen },
+    { href: "/learner/exams",     label: "Examinations",        subLabel: "Timed assessments", icon: ClipboardCheck },
+    { href: "/learner/past-papers", label: "Past Papers & Revision", icon: BookOpen },
+    { href: "/marketplace",       label: "Marketplace",        subLabel: "Books & resources", icon: BookOpen },
     { href: "/chat",              label: "AI Study Chatbot",   icon: Bot,          badge: "AI" },
     { href: "/tutors",            label: "Book a Tutor",       icon: Users },
     { href: "/marketplace",       label: "My Rentals & Requests", icon: Bookmark },
@@ -56,6 +59,7 @@ const TUTOR_NAV = {
   sectionDot: "bg-purple-400",
   items: [
     { href: "/tutor/dashboard",  label: "Dashboard",            icon: LayoutDashboard },
+    { href: "/tutor/exams",      label: "Examinations",          icon: ClipboardList },
     { href: "/tutor/sessions",   label: "My Sessions",          icon: CalendarDays },
     { href: "/tutor/calendar",   label: "Availability Calendar",icon: ClipboardList },
     { href: "/tutor/earnings",   label: "Earnings & Rates",     icon: DollarSign },
@@ -71,6 +75,7 @@ const ADMIN_NAV = {
   sectionDot: "bg-amber-400",
   items: [
     { href: "/admin/dashboard",    label: "Admin Console",          icon: LayoutDashboard },
+    { href: "/admin/exams",        label: "Exam Management",         icon: ClipboardList },
     { href: "/admin/users",        label: "User Management",        icon: Users },
     { href: "/admin/catalog",      label: "Book Catalog Approval",  icon: BookMarked },
     { href: "/admin/verification", label: "Tutor Verification",     icon: CheckSquare },
