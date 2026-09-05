@@ -22,7 +22,7 @@ const PLANS = [
   {
     id: "plus" as SubscriptionTier,
     name: "Plus",
-    price: "9.99",
+    price: "37,000",
     period: "month",
     description: "Ideal for active semester study",
     popular: true,
@@ -37,7 +37,7 @@ const PLANS = [
   {
     id: "pro" as SubscriptionTier,
     name: "Pro",
-    price: "19.99",
+    price: "74,000",
     period: "month",
     description: "Maximum GPA accelerator",
     popular: false,
@@ -111,7 +111,7 @@ export default function PlansPage() {
                 <div>
                   <h3 className="text-base font-bold text-slate-900">{plan.name}</h3>
                   <div className="mt-2 flex items-baseline gap-1">
-                    <span className="text-3xl font-black text-slate-900">${plan.price}</span>
+                    <span className="text-3xl font-black text-slate-900">UGX {plan.price}</span>
                     <span className="text-xs text-slate-400">/ {plan.period}</span>
                   </div>
                 </div>

@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useUser } from "@/context/user-context";
+import { formatUgx } from "@/lib/currency";
 
 interface CourseProgress {
   id: string;
@@ -61,25 +62,25 @@ const RECOMMENDED_BOOKS = [
   {
     title: "Advanced Mathematics",
     author: "M. Green",
-    price: 12.0,
+    price: 44400,
     coverUrl: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=300&auto=format&fit=crop&q=80",
   },
   {
     title: "Essential Biology",
     author: "A. Kato",
-    price: 7.0,
+    price: 25900,
     coverUrl: "https://images.unsplash.com/photo-1532012164546-f432f2e3777f?w=300&auto=format&fit=crop&q=80",
   },
   {
     title: "Physics for Beginners",
     author: "R. Ochieng",
-    price: 8.0,
+    price: 29600,
     coverUrl: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=300&auto=format&fit=crop&q=80",
   },
   {
     title: "English Literature Form 5",
     author: "S. Nalubega",
-    price: 6.0,
+    price: 22200,
     coverUrl: "https://images.unsplash.com/photo-1461360370896-922624d12aa1?w=300&auto=format&fit=crop&q=80",
   },
 ];
@@ -197,7 +198,7 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="learn-card p-5">
             <p className="text-xs font-semibold text-slate-500">Monthly Earnings</p>
-            <p className="text-2xl font-extrabold text-slate-900 mt-1">$1,280.00</p>
+            <p className="text-2xl font-extrabold text-slate-900 mt-1">{formatUgx(4736000)}</p>
             <span className="text-[11px] text-emerald-600 font-bold mt-1 inline-block">+18% this month</span>
           </div>
           <div className="learn-card p-5">
@@ -296,7 +297,7 @@ export default function DashboardPage() {
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                 />
                 <span className="absolute bottom-2 right-2 bg-white/95 backdrop-blur-md px-2 py-0.5 rounded-lg text-[10px] font-bold text-slate-900 shadow-xs">
-                  Rent from ${book.price.toFixed(2)}
+                  Rent from {formatUgx(book.price)}
                 </span>
               </div>
               <div className="p-3">

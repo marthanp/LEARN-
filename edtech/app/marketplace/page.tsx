@@ -15,6 +15,7 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { useUser } from "@/context/user-context";
+import { formatUgx } from "@/lib/currency";
 
 interface BookItem {
   id: string;
@@ -38,7 +39,7 @@ const POPULAR_BOOKS: BookItem[] = [
     isbn: "978-0199148721",
     courseCode: "BIO 101",
     isDigital: true,
-    rentalPrice: 9.0,
+    rentalPrice: 33300,
     rating: 4.7,
     reviewCount: 120,
     condition: "Digital PDF",
@@ -51,7 +52,7 @@ const POPULAR_BOOKS: BookItem[] = [
     isbn: "978-1285741550",
     courseCode: "MATH 201",
     isDigital: false,
-    rentalPrice: 12.0,
+    rentalPrice: 44400,
     rating: 4.5,
     reviewCount: 89,
     condition: "Good Condition",
@@ -64,7 +65,7 @@ const POPULAR_BOOKS: BookItem[] = [
     isbn: "978-0134610993",
     courseCode: "PHYS 102",
     isDigital: true,
-    rentalPrice: 8.0,
+    rentalPrice: 29600,
     rating: 4.8,
     reviewCount: 156,
     condition: "Digital ePub",
@@ -77,7 +78,7 @@ const POPULAR_BOOKS: BookItem[] = [
     isbn: "978-1319079451",
     courseCode: "CHEM 220",
     isDigital: false,
-    rentalPrice: 9.0,
+    rentalPrice: 33300,
     rating: 4.6,
     reviewCount: 97,
     condition: "Like New",
@@ -90,7 +91,7 @@ const POPULAR_BOOKS: BookItem[] = [
     isbn: "978-0262046305",
     courseCode: "CS 301",
     isDigital: true,
-    rentalPrice: 14.0,
+    rentalPrice: 51800,
     rating: 4.9,
     reviewCount: 210,
     condition: "Digital PDF",
@@ -103,7 +104,7 @@ const POPULAR_BOOKS: BookItem[] = [
     isbn: "978-1259642234",
     courseCode: "NEUR 410",
     isDigital: true,
-    rentalPrice: 16.0,
+    rentalPrice: 59200,
     rating: 4.9,
     reviewCount: 88,
     condition: "Digital PDF",
@@ -115,7 +116,7 @@ export default function MarketplacePage() {
   const { user, rentals, rentBook, returnBook } = useUser();
   const [books, setBooks] = useState<BookItem[]>(POPULAR_BOOKS);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedFilter, setSelectedFilter] = useState<"all" | "digital" | "physical" | "under20">("all");
+  const [selectedFilter, setSelectedFilter] = useState<"all" | "digital" | "physical" | "under74000">("all");
   const [activeTab, setActiveTab] = useState<"catalog" | "my-rentals">("catalog");
 
   // Rental Modal state
@@ -127,7 +128,7 @@ export default function MarketplacePage() {
   const [showListModal, setShowListModal] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newAuthor, setNewAuthor] = useState("");
-  const [newPrice, setNewPrice] = useState("9.00");
+  const [newPrice, setNewPrice] = useState("33300");
   const [newIsDigital, setNewIsDigital] = useState(true);
 
   // Digital Reader Simulation Modal
@@ -144,12 +145,12 @@ export default function MarketplacePage() {
     if (!matchesSearch) return false;
     if (selectedFilter === "digital") return b.isDigital;
     if (selectedFilter === "physical") return !b.isDigital;
-    if (selectedFilter === "under20") return b.rentalPrice < 20;
+    if (selectedFilter === "under74000") return b.rentalPrice < 74000;
     return true;
   });
 
   const getComputedPrice = (basePrice: number) => {
-    if (durationOption === "30days") return 5.0;
+    if (durationOption === "30days") return 18500;
     if (durationOption === "custom") return Math.round(basePrice * 1.15 * 100) / 100;
     return basePrice;
   };
@@ -189,7 +190,7 @@ export default function MarketplacePage() {
       isbn: "978-0199148000",
       courseCode: "GEN 101",
       isDigital: newIsDigital,
-      rentalPrice: parseFloat(newPrice) || 9.0,
+      rentalPrice: parseFloat(newPrice) || 33300,
       rating: 5.0,
       reviewCount: 1,
       condition: newIsDigital ? "Digital PDF" : "Good Condition",
@@ -223,7 +224,7 @@ export default function MarketplacePage() {
             { id: "all", label: "All" },
             { id: "digital", label: "Digital Only" },
             { id: "physical", label: "Physical Only" },
-            { id: "under20", label: "Under $20" },
+            { id: "under74000", label: "Under UGX 74,000" },
           ].map((pill) => (
             <button
               key={pill.id}
@@ -290,7 +291,7 @@ export default function MarketplacePage() {
 
                         <div className="mt-2 flex items-center justify-between">
                           <span className="text-xs font-extrabold text-slate-900">
-                            ${book.rentalPrice.toFixed(2)}{" "}
+                            {formatUgx(book.rentalPrice)}{" "}
                             <span className="text-[10px] font-normal text-slate-400">/ semester</span>
                           </span>
                           <div className="flex items-center gap-1 text-[11px] font-bold text-amber-500">
@@ -463,7 +464,7 @@ export default function MarketplacePage() {
                       {selectedBookForRent.isDigital ? "Format: PDF" : `Condition: ${selectedBookForRent.condition}`}
                     </p>
                     <p className="text-xs font-bold text-slate-900 mt-2">
-                      ${selectedBookForRent.rentalPrice.toFixed(2)} / semester
+                      {formatUgx(selectedBookForRent.rentalPrice)} / semester
                     </p>
                   </div>
                 </div>
@@ -474,8 +475,8 @@ export default function MarketplacePage() {
                     <label className="text-xs font-bold text-slate-700 block">Choose Duration</label>
                     <div className="space-y-2">
                       {[
-                        { id: "semester" as const, label: "1 Semester (4 months)", price: `$${selectedBookForRent.rentalPrice.toFixed(2)}` },
-                        { id: "30days" as const, label: "30 Days", price: "$5.00" },
+                        { id: "semester" as const, label: "1 Semester (4 months)", price: formatUgx(selectedBookForRent.rentalPrice) },
+                        { id: "30days" as const, label: "30 Days", price: formatUgx(18500) },
                         { id: "custom" as const, label: "Custom Dates", price: "Flexible" },
                       ].map((opt) => (
                         <label
@@ -515,7 +516,7 @@ export default function MarketplacePage() {
                 <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
                   <span className="text-xs font-semibold text-slate-500">Total</span>
                   <span className="text-base font-extrabold text-slate-900">
-                    ${getComputedPrice(selectedBookForRent.rentalPrice).toFixed(2)}
+                    {formatUgx(getComputedPrice(selectedBookForRent.rentalPrice))}
                   </span>
                 </div>
 
@@ -569,7 +570,7 @@ export default function MarketplacePage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-bold text-slate-700 block mb-1">Rental Price ($)</label>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">Rental Price (UGX)</label>
                   <input
                     type="number"
                     step="0.5"
