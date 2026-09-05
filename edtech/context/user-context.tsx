@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 
-export type UserRole = "student" | "tutor";
+export type UserRole = "student" | "learner" | "tutor" | "admin";
 export type SubscriptionTier = "free" | "plus" | "pro";
 
 export interface BookRental {
@@ -55,9 +55,9 @@ interface UserContextType {
 
 const DEFAULT_USER: UserProfile = {
   id: "usr_mock_101",
-  fullName: "Aisha Nalubega",
-  email: "aisha@university.edu",
-  role: "student",
+  fullName: "Alex Ssemakula",
+  email: "alex@learnplus.edu",
+  role: "learner",
   subscriptionTier: "plus",
   avatarUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
 };
@@ -109,11 +109,36 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [bookings, setBookings] = useState<TutorBooking[]>(DEFAULT_BOOKINGS);
   const [aiMessagesCount, setAiMessagesCount] = useState<number>(3);
 
-  // Hydrate from localStorage if present
+  // Hydrate from cookies and localStorage if present
   useEffect(() => {
     try {
-      const savedUser = localStorage.getItem("eduhub_user");
-      if (savedUser) setUser(JSON.parse(savedUser));
+      let activeRole: UserRole | undefined;
+      let activeName: string | undefined;
+
+      // Check cookies set during signup / login
+      const cookies = document.cookie.split("; ");
+      const roleCookie = cookies.find((c) => c.startsWith("learn_user_role="))?.split("=")[1];
+      const nameCookie = cookies.find((c) => c.startsWith("learn_user_name="))?.split("=")[1];
+
+      if (roleCookie) {
+        activeRole = roleCookie as UserRole;
+      }
+      if (nameCookie) {
+        activeName = decodeURIComponent(nameCookie);
+      }
+
+      const savedUserStr = localStorage.getItem("eduhub_user");
+      let savedUser: Partial<UserProfile> = {};
+      if (savedUserStr) {
+        savedUser = JSON.parse(savedUserStr);
+      }
+
+      setUser((prev) => ({
+        ...prev,
+        ...savedUser,
+        role: (activeRole || savedUser.role || prev.role) as UserRole,
+        fullName: activeName || savedUser.fullName || prev.fullName,
+      }));
 
       const savedRentals = localStorage.getItem("eduhub_rentals");
       if (savedRentals) setRentals(JSON.parse(savedRentals));
@@ -126,6 +151,8 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const setRole = (role: UserRole) => {
+    // Set cookie so middleware and route guards align
+    document.cookie = `learn_user_role=${role}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
     setUser((prev) => {
       const next = { ...prev, role };
       localStorage.setItem("eduhub_user", JSON.stringify(next));
