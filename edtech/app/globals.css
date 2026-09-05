@@ -1,0 +1,106 @@
+@import "tailwindcss";
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LEARN+ – Visual Plan Design System (Learn More. Achieve More.)
+   Colors:
+     Primary Purple:   #4F46E5
+     Accent Purple:    #7C3AED
+     Teal / Emerald:   #10B981
+     Amber / Orange:   #F59E0B
+     Muted Slate:      #64748B / #6B7280
+     Dark Slate/Navy:  #0F172A
+     Background Light: #F8FAFC
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@theme inline {
+  --font-sans: var(--font-inter), "Poppins", ui-sans-serif, system-ui, sans-serif;
+
+  /* ── Visual Plan Palette ─────────────────────────────────────────────────── */
+  --color-brand-primary: #4F46E5;
+  --color-brand-accent:  #7C3AED;
+  --color-brand-teal:    #10B981;
+  --color-brand-amber:   #F59E0B;
+  --color-brand-slate:   #64748B;
+  --color-brand-dark:    #0F172A;
+  --color-brand-bg:      #F8FAFC;
+
+  --sidebar-width:       256px;
+  --sidebar-collapsed:   72px;
+}
+
+/* ── Base ──────────────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+  scroll-behavior: smooth;
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-sans);
+  min-height: 100dvh;
+  display: flex;
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+/* ── Scrollbar ─────────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+/* ── Focus ─────────────────────────────────────────────────────────────────── */
+:focus-visible { outline: 2px solid #4F46E5; outline-offset: 2px; border-radius: 6px; }
+
+/* ── Selection ─────────────────────────────────────────────────────────────── */
+::selection { background: #4F46E525; color: #4F46E5; }
+
+/* ═══════════════════════════════════
+   Utility classes
+   ═══════════════════════════════════ */
+
+/* Clean white cards matching LEARN+ */
+.learn-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 1rem;
+  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.04), 0 1px 2px -1px rgba(15, 23, 42, 0.04);
+}
+
+.learn-card-hover {
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.learn-card-hover:hover {
+  transform: translateY(-2px);
+  border-color: #cbd5e1;
+  box-shadow: 0 10px 25px -5px rgba(79, 70, 229, 0.08), 0 8px 10px -6px rgba(79, 70, 229, 0.04);
+}
+
+/* Gradient text */
+.gradient-text {
+  background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Tier pills */
+.tier-free { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
+.tier-plus { background: #eef2ff; color: #4f46e5; border: 1px solid #c7d2fe; }
+.tier-pro  {
+  background: #fffbeb;
+  color: #d97706;
+  border: 1px solid #fde68a;
+}
+
+/* Role badges */
+.role-student { background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; }
+.role-tutor   { background: #f5f3ff; color: #7c3aed; border: 1px solid #ddd6fe; }
+
+/* Sidebar active item */
+.sidebar-active {
+  background: #4F46E5;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+}
