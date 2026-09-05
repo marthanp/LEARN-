@@ -40,6 +40,8 @@ export interface ExamSummary {
   published: boolean;
   status?: "upcoming" | "available" | "completed";
 }
+export type LibraryResourceType = "textbook" | "syllabus" | "teacher_guide" | "revision" | "notes" | "other";
+export type LibraryContentStatus = "available" | "metadata_only" | "restricted";
 
 export interface Database {
   public: {
@@ -66,6 +68,17 @@ export interface Database {
           cover_url: string | null;
           description: string | null;
           subject: string | null;
+          country: string;
+          level: string | null;
+          curriculum: string | null;
+          resource_type: LibraryResourceType;
+          publisher: string | null;
+          storage_path: string | null;
+          document_url: string | null;
+          source_attribution: string | null;
+          content_status: LibraryContentStatus;
+          content_license: string | null;
+          publication_year: number | null;
           is_digital: boolean;
           rental_price: number;
           stock_quantity: number;
@@ -87,6 +100,18 @@ export interface Database {
         };
         Insert: Omit<Database["public"]["Tables"]["rentals"]["Row"], "id" | "created_at" | "returned_at">;
         Update: Partial<Database["public"]["Tables"]["rentals"]["Insert"]>;
+      };
+      library_borrows: {
+        Row: {
+          id: string;
+          learner_id: string;
+          book_id: string;
+          status: "active" | "returned";
+          borrowed_at: string;
+          returned_at: string | null;
+        };
+        Insert: Omit<Database["public"]["Tables"]["library_borrows"]["Row"], "id" | "borrowed_at" | "returned_at">;
+        Update: Partial<Database["public"]["Tables"]["library_borrows"]["Insert"]>;
       };
       tutor_profiles: {
         Row: {

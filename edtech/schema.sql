@@ -74,6 +74,44 @@ create index if not exists books_isbn_idx       on public.books (isbn);
 create index if not exists books_is_digital_idx on public.books (is_digital);
 create index if not exists books_subject_idx    on public.books (subject);
 
+-- Uganda library metadata. Files remain in Supabase Storage, never in Git.
+alter table public.books add column if not exists country text not null default 'Uganda';
+alter table public.books add column if not exists level text;
+alter table public.books add column if not exists curriculum text;
+alter table public.books add column if not exists resource_type text not null default 'textbook';
+alter table public.books add column if not exists publisher text;
+alter table public.books add column if not exists storage_path text;
+alter table public.books add column if not exists document_url text;
+alter table public.books add column if not exists source_attribution text;
+alter table public.books add column if not exists content_status text not null default 'metadata_only';
+alter table public.books add column if not exists content_license text;
+alter table public.books add column if not exists publication_year integer;
+create index if not exists books_level_subject_idx on public.books (level, subject);
+
+create unique index if not exists rentals_one_active_book_per_student_idx
+  on public.rentals (student_id, book_id) where status = 'active';
+
+-- Library borrow records keep curriculum access separate from pricing.
+create table if not exists public.library_borrows (
+  id uuid primary key default uuid_generate_v4(),
+  learner_id uuid not null references public.profiles(id) on delete cascade,
+  book_id uuid not null references public.books(id) on delete cascade,
+  status text not null default 'active',
+  borrowed_at timestamptz not null default now(),
+  returned_at timestamptz,
+  unique (learner_id, book_id),
+  check (status in ('active', 'returned'))
+);
+
+create index if not exists library_borrows_learner_idx on public.library_borrows (learner_id, status);
+alter table public.library_borrows enable row level security;
+drop policy if exists "library_borrows_select_own" on public.library_borrows;
+create policy "library_borrows_select_own" on public.library_borrows for select using (auth.uid() = learner_id);
+drop policy if exists "library_borrows_insert_own" on public.library_borrows;
+create policy "library_borrows_insert_own" on public.library_borrows for insert with check (auth.uid() = learner_id);
+drop policy if exists "library_borrows_update_own" on public.library_borrows;
+create policy "library_borrows_update_own" on public.library_borrows for update using (auth.uid() = learner_id);
+
 -- ─────────────────────────────────────────────
 -- 4. RENTALS  (physical book rentals)
 -- ─────────────────────────────────────────────

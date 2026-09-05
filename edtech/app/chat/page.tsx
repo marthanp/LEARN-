@@ -123,6 +123,7 @@ export default function ChatPage() {
   const [speechError, setSpeechError] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const speechUrlsRef = useRef<Record<string, string>>({});
+  const chatSessionRef = useRef(0);
 
   useEffect(() => {
     const savedSubject = localStorage.getItem("eduhub_selected_subject");
@@ -151,12 +152,28 @@ export default function ChatPage() {
     };
   }, []);
 
+  const startNewChat = () => {
+    chatSessionRef.current += 1;
+    audioRef.current?.pause();
+    Object.values(speechUrlsRef.current).forEach((url) => URL.revokeObjectURL(url));
+    setMessages([]);
+    setInput("");
+    setChatId("");
+    setIsTyping(false);
+    setSpeechUrls({});
+    setSpeechLoadingId(null);
+    setPlayingMessageId(null);
+    setSpeechError(null);
+  };
+
   const maxMessages = user.subscriptionTier === "free" ? 5 : user.subscriptionTier === "plus" ? 50 : 999999;
   const isLimitReached = aiMessagesCount >= maxMessages && user.subscriptionTier === "free";
 
   const handleSend = async (textToSend?: string) => {
     const text = textToSend || input.trim();
     if (!text || isTyping) return;
+
+    const chatSession = chatSessionRef.current;
 
     if (isLimitReached) {
       alert("You have reached your daily Free tier limit (5 queries). Upgrade to Plus or Pro for more!");
@@ -190,6 +207,9 @@ export default function ChatPage() {
         error: error instanceof Error ? error.message : "Unable to contact the AI service.",
       };
     }
+
+    if (chatSession !== chatSessionRef.current) return;
+
     const botMsg: ChatMessage = {
       id: `ai_${Date.now()}`,
       sender: "assistant",
@@ -261,8 +281,7 @@ export default function ChatPage() {
         <div className="space-y-4">
           <button
             onClick={() => {
-              setMessages(INITIAL_MESSAGES);
-              setChatId("");
+              startNewChat();
               resetAiMessages();
             }}
             className="w-full py-2.5 px-4 rounded-xl bg-[#4F46E5] hover:bg-[#4338CA] text-white text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer"
@@ -317,7 +336,7 @@ export default function ChatPage() {
                     const nextSubject = e.target.value;
                     localStorage.setItem("eduhub_selected_subject", nextSubject);
                     setSelectedSubject(nextSubject);
-                    window.location.reload();
+                    startNewChat();
                   }}
                   className="text-xs font-semibold text-[#4F46E5] bg-transparent border-none focus:outline-none cursor-pointer"
                 >
