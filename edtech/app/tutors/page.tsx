@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useUser } from "@/context/user-context";
+import { formatUgx } from "@/lib/currency";
 
 export interface Tutor {
   id: string;
@@ -49,7 +50,7 @@ const TUTORS_CATALOG: Tutor[] = [
     avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&auto=format&fit=crop&q=80",
     subject: "Mathematics & Calculus Tutor",
     category: "Math",
-    rate: 15.0,
+    rate: 55500,
     rating: 4.9,
     sessions: 120,
     location: "Main Library & Online (Zoom)",
@@ -65,7 +66,7 @@ const TUTORS_CATALOG: Tutor[] = [
     avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=200&auto=format&fit=crop&q=80",
     subject: "Cellular Biology & Genetics",
     category: "Biology",
-    rate: 14.0,
+    rate: 44400,
     rating: 4.8,
     sessions: 95,
     location: "Life Sciences Wing & Online",
@@ -77,11 +78,27 @@ const TUTORS_CATALOG: Tutor[] = [
   },
   {
     id: "t3",
+    name: "Peter Okello",
+    avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&auto=format&fit=crop&q=80",
+    subject: "Physics Tutor",
+    category: "Physics",
+    rate: 55500,
+    rating: 4.7,
+    sessions: 84,
+    location: "Engineering Commons & Online",
+    tags: ["Mechanics", "Electromagnetism", "Optics"],
+    bio: "Focuses on building physical intuition and breaking down complex vector calculus problems.",
+    availability: "today",
+    availabilityText: "Available Today",
+    nextAvailableSlot: "Today, 6:00 PM",
+  },
+  {
+    id: "t4",
     name: "Liam Chen",
     avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&auto=format&fit=crop&q=80",
     subject: "Data Structures & Algorithms",
     category: "CS",
-    rate: 20.0,
+    rate: 74000,
     rating: 5.0,
     sessions: 190,
     location: "CS Lab & Online",
@@ -392,17 +409,10 @@ export default function TutorsPage() {
 
                 {/* Bottom Rate & Book Action */}
                 <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
-                  <div>
-                    <span className="text-sm font-extrabold text-slate-900">
-                      ${tutor.rate.toFixed(2)}{" "}
-                      <span className="text-xs font-normal text-slate-400">/ hr</span>
-                    </span>
-                    {discountRate > 0 && (
-                      <div className="text-[10px] text-emerald-600 font-bold">
-                        ${(tutor.rate * (1 - discountRate)).toFixed(2)} with your plan
-                      </div>
-                    )}
-                  </div>
+                  <span className="text-sm font-extrabold text-slate-900">
+                    {formatUgx(tutor.rate)}{" "}
+                    <span className="text-xs font-normal text-slate-400">/ hour</span>
+                  </span>
                   <button
                     onClick={() => setBookingTutor(tutor)}
                     className="px-4 py-2 rounded-xl bg-[#4F46E5] hover:bg-[#4338CA] text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
@@ -471,7 +481,7 @@ export default function TutorsPage() {
                       <span className="flex items-center gap-1">
                         <Clock className="h-3 w-3 text-slate-400" /> {booking.time}
                       </span>
-                      <span className="font-bold text-slate-900">${booking.finalPrice.toFixed(2)}</span>
+                      <span className="font-bold text-slate-900">{formatUgx(booking.finalPrice)}</span>
                     </div>
                   </div>
                 </div>
@@ -531,7 +541,7 @@ export default function TutorsPage() {
                     <h4 className="text-xs font-bold text-slate-900">{bookingTutor.name}</h4>
                     <p className="text-[11px] text-slate-500">{bookingTutor.subject}</p>
                     <div className="flex items-center gap-2 mt-1">
-                      <span className="text-xs font-bold text-[#4F46E5]">${bookingTutor.rate.toFixed(2)} / hour</span>
+                      <span className="text-xs font-bold text-[#4F46E5]">{formatUgx(bookingTutor.rate)} / hour</span>
                       <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-semibold">
                         {bookingTutor.availabilityText}
                       </span>
@@ -606,18 +616,18 @@ export default function TutorsPage() {
                 <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100 space-y-1 text-xs">
                   <div className="flex justify-between text-slate-500">
                     <span>Hourly Rate:</span>
-                    <span className="font-semibold text-slate-800">${bookingTutor.rate.toFixed(2)}</span>
+                    <span className="font-semibold text-slate-800">{formatUgx(bookingTutor.rate)}</span>
                   </div>
                   {discountRate > 0 && (
                     <div className="flex justify-between text-emerald-600 font-semibold">
                       <span>Your Plan Discount ({(discountRate * 100).toFixed(0)}%):</span>
-                      <span>-${(bookingTutor.rate * discountRate).toFixed(2)}</span>
+                      <span>-{formatUgx(bookingTutor.rate * discountRate)}</span>
                     </div>
                   )}
                   <div className="border-t border-slate-200 pt-1 flex justify-between font-bold text-slate-900 text-sm">
                     <span>Total:</span>
                     <span className="text-[#4F46E5]">
-                      ${(bookingTutor.rate * (1 - discountRate)).toFixed(2)}
+                      {formatUgx(bookingTutor.rate * (1 - discountRate))}
                     </span>
                   </div>
                 </div>

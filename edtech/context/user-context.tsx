@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { USD_TO_UGX } from "@/lib/currency";
 
 export type UserRole = "student" | "learner" | "tutor" | "admin";
 export type SubscriptionTier = "free" | "plus" | "pro";
@@ -72,7 +73,7 @@ const DEFAULT_RENTALS: BookRental[] = [
     dueDate: "2026-10-15",
     status: "active",
     isDigital: false,
-    rentalPrice: 18.5,
+    rentalPrice: 68450,
   },
   {
     id: "rent_2",
@@ -83,7 +84,7 @@ const DEFAULT_RENTALS: BookRental[] = [
     dueDate: "2026-12-20",
     status: "active",
     isDigital: true,
-    rentalPrice: 24.0,
+    rentalPrice: 88800,
   },
 ];
 
@@ -94,8 +95,8 @@ const DEFAULT_BOOKINGS: TutorBooking[] = [
     subject: "Calculus III & Differential Equations",
     date: "2026-09-08",
     time: "3:00 PM - 4:00 PM",
-    hourlyRate: 45,
-    finalPrice: 40.5,
+    hourlyRate: 166500,
+    finalPrice: 149850,
     status: "confirmed",
     notes: "Review multi-variable chain rule and Lagrange multipliers.",
   },
@@ -127,11 +128,13 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         activeName = decodeURIComponent(nameCookie);
       }
 
+      const currencyVersion = localStorage.getItem("eduhub_currency_version");
+      const convertLegacyAmount = (amount: number) =>
+        currencyVersion === "ugx" || amount >= 1000 ? amount : Math.round(amount * USD_TO_UGX);
+
       const savedUserStr = localStorage.getItem("eduhub_user");
       let savedUser: Partial<UserProfile> = {};
-      if (savedUserStr) {
-        savedUser = JSON.parse(savedUserStr);
-      }
+      if (savedUserStr) savedUser = JSON.parse(savedUserStr);
 
       setUser((prev) => ({
         ...prev,
@@ -141,10 +144,29 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       }));
 
       const savedRentals = localStorage.getItem("eduhub_rentals");
-      if (savedRentals) setRentals(JSON.parse(savedRentals));
+      if (savedRentals) {
+        const parsedRentals = JSON.parse(savedRentals) as BookRental[];
+        const convertedRentals = parsedRentals.map((rental) => ({
+          ...rental,
+          rentalPrice: convertLegacyAmount(rental.rentalPrice),
+        }));
+        setRentals(convertedRentals);
+        localStorage.setItem("eduhub_rentals", JSON.stringify(convertedRentals));
+      }
 
       const savedBookings = localStorage.getItem("eduhub_bookings");
-      if (savedBookings) setBookings(JSON.parse(savedBookings));
+      if (savedBookings) {
+        const parsedBookings = JSON.parse(savedBookings) as TutorBooking[];
+        const convertedBookings = parsedBookings.map((booking) => ({
+          ...booking,
+          hourlyRate: convertLegacyAmount(booking.hourlyRate),
+          finalPrice: convertLegacyAmount(booking.finalPrice),
+        }));
+        setBookings(convertedBookings);
+        localStorage.setItem("eduhub_bookings", JSON.stringify(convertedBookings));
+      }
+
+      localStorage.setItem("eduhub_currency_version", "ugx");
     } catch {
       // ignore SSR parsing
     }

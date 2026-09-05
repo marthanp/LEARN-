@@ -15,9 +15,13 @@ import {
   ArrowRight,
   ShieldAlert,
   ChevronDown,
+  Volume2,
+  Pause,
+  LoaderCircle,
 } from "lucide-react";
 import { useUser } from "@/context/user-context";
 import Link from "next/link";
+import { generateSpeech, sendStudyMessage } from "@/lib/ai/chat";
 
 interface ChatMessage {
   id: string;
@@ -72,12 +76,60 @@ const INITIAL_MESSAGES: ChatMessage[] = [
   },
 ];
 
+function pcmToWav(base64: string, mimeType: string) {
+  const binary = atob(base64);
+  const pcm = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) {
+    pcm[index] = binary.charCodeAt(index);
+  }
+
+  const sampleRate = Number(mimeType.match(/rate=(\d+)/)?.[1] || 24000);
+  const wav = new ArrayBuffer(44 + pcm.length);
+  const view = new DataView(wav);
+  const writeText = (offset: number, value: string) => {
+    for (let index = 0; index < value.length; index += 1) {
+      view.setUint8(offset + index, value.charCodeAt(index));
+    }
+  };
+
+  writeText(0, "RIFF");
+  view.setUint32(4, 36 + pcm.length, true);
+  writeText(8, "WAVE");
+  writeText(12, "fmt ");
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  writeText(36, "data");
+  view.setUint32(40, pcm.length, true);
+  new Uint8Array(wav, 44).set(pcm);
+
+  return new Blob([wav], { type: "audio/wav" });
+}
+
 export default function ChatPage() {
   const { user, aiMessagesCount, incrementAiMessages, resetAiMessages } = useUser();
   const [messages, setMessages] = useState<ChatMessage[]>(INITIAL_MESSAGES);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [selectedSubject, setSelectedSubject] = useState(SUBJECTS[0]);
+  const [chatId, setChatId] = useState("");
+  const [speechUrls, setSpeechUrls] = useState<Record<string, string>>({});
+  const [speechLoadingId, setSpeechLoadingId] = useState<string | null>(null);
+  const [playingMessageId, setPlayingMessageId] = useState<string | null>(null);
+  const [speechError, setSpeechError] = useState<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const speechUrlsRef = useRef<Record<string, string>>({});
+
+  useEffect(() => {
+    const savedSubject = localStorage.getItem("eduhub_selected_subject");
+    if (savedSubject && SUBJECTS.includes(savedSubject)) {
+      setSelectedSubject(savedSubject);
+    }
+  }, []);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -88,10 +140,21 @@ export default function ChatPage() {
     scrollToBottom();
   }, [messages, isTyping]);
 
+  useEffect(() => {
+    speechUrlsRef.current = speechUrls;
+  }, [speechUrls]);
+
+  useEffect(() => {
+    return () => {
+      audioRef.current?.pause();
+      Object.values(speechUrlsRef.current).forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, []);
+
   const maxMessages = user.subscriptionTier === "free" ? 5 : user.subscriptionTier === "plus" ? 50 : 999999;
   const isLimitReached = aiMessagesCount >= maxMessages && user.subscriptionTier === "free";
 
-  const handleSend = (textToSend?: string) => {
+  const handleSend = async (textToSend?: string) => {
     const text = textToSend || input.trim();
     if (!text || isTyping) return;
 
@@ -112,42 +175,33 @@ export default function ChatPage() {
     setIsTyping(true);
     incrementAiMessages();
 
-    setTimeout(() => {
-      let aiText = `Here is the academic explanation for "${text}" in ${selectedSubject}:`;
-      let formula: string | undefined = undefined;
-      let steps: string[] | undefined = undefined;
-      let quizData: ChatMessage["quiz"] | undefined = undefined;
+    const history = messages.map((item) => ({
+      role: item.sender,
+      content: item.text,
+    }));
 
-      if (text.toLowerCase().includes("quiz")) {
-        aiText = `Here is a practice quiz on **${selectedSubject}**:`;
-        quizData = {
-          question: "Given 2x² - 4x - 6 = 0, what are the roots using the quadratic formula?",
-          options: ["x = 3 or x = -1", "x = -3 or x = 1", "x = 2 or x = -2", "x = 4 or x = -1"],
-          correctIndex: 0,
-          explanation: "a=2, b=-4, c=-6. Discriminant is (-4)² - 4(2)(-6) = 16 + 48 = 64. √64 = 8. x = (4 ± 8)/4 → x = 3 or x = -1.",
-        };
-      } else {
-        formula = selectedSubject === "Mathematics" ? "f'(x) = \\lim_{h \\to 0} \\frac{f(x+h) - f(x)}{h}" : undefined;
-        steps = [
-          "Establish core definitions and constraints.",
-          "Apply the standard derivation theorem step-by-step.",
-          "Verify the solution against known boundary conditions.",
-        ];
-      }
-
-      const botMsg: ChatMessage = {
-        id: `ai_${Date.now()}`,
-        sender: "assistant",
-        text: aiText,
-        formula,
-        steps,
-        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        quiz: quizData,
+    let result;
+    try {
+      result = await sendStudyMessage(chatId, text, history, selectedSubject);
+    } catch (error) {
+      result = {
+        chatId,
+        reply: "",
+        error: error instanceof Error ? error.message : "Unable to contact the AI service.",
       };
+    }
+    const botMsg: ChatMessage = {
+      id: `ai_${Date.now()}`,
+      sender: "assistant",
+      text: result.error
+        ? `I couldn't generate a response right now. ${result.error}`
+        : result.reply,
+      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+    };
 
-      setMessages((prev) => [...prev, botMsg]);
+    setChatId(result.chatId);
+    setMessages((prev) => [...prev, botMsg]);
       setIsTyping(false);
-    }, 1000);
   };
 
   const handleQuizSelect = (messageId: string, optionIndex: number) => {
@@ -164,6 +218,42 @@ export default function ChatPage() {
     );
   };
 
+  const handleListen = async (message: ChatMessage) => {
+    setSpeechError(null);
+
+    if (playingMessageId === message.id) {
+      audioRef.current?.pause();
+      setPlayingMessageId(null);
+      return;
+    }
+
+    audioRef.current?.pause();
+    let audioUrl = speechUrls[message.id];
+
+    try {
+      if (!audioUrl) {
+        setSpeechLoadingId(message.id);
+        const result = await generateSpeech(message.text);
+        audioUrl = URL.createObjectURL(pcmToWav(result.audioBase64, result.mimeType));
+        setSpeechUrls((previous) => ({ ...previous, [message.id]: audioUrl }));
+      }
+
+      const audio = new Audio(audioUrl);
+      audio.onended = () => setPlayingMessageId(null);
+      audio.onerror = () => {
+        setPlayingMessageId(null);
+        setSpeechError("This answer could not be played.");
+      };
+      audioRef.current = audio;
+      await audio.play();
+      setPlayingMessageId(message.id);
+    } catch (error) {
+      setSpeechError(error instanceof Error ? error.message : "Unable to generate audio.");
+    } finally {
+      setSpeechLoadingId(null);
+    }
+  };
+
   return (
     <div className="max-w-6xl mx-auto h-[calc(100vh-7.5rem)] flex gap-5">
       {/* ── Left Chat History Sidebar matching Visual Plan #2 ───────────────── */}
@@ -172,6 +262,7 @@ export default function ChatPage() {
           <button
             onClick={() => {
               setMessages(INITIAL_MESSAGES);
+              setChatId("");
               resetAiMessages();
             }}
             className="w-full py-2.5 px-4 rounded-xl bg-[#4F46E5] hover:bg-[#4338CA] text-white text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer"
@@ -222,7 +313,12 @@ export default function ChatPage() {
                 <span className="text-[11px] text-slate-400">Subject:</span>
                 <select
                   value={selectedSubject}
-                  onChange={(e) => setSelectedSubject(e.target.value)}
+                  onChange={(e) => {
+                    const nextSubject = e.target.value;
+                    localStorage.setItem("eduhub_selected_subject", nextSubject);
+                    setSelectedSubject(nextSubject);
+                    window.location.reload();
+                  }}
                   className="text-xs font-semibold text-[#4F46E5] bg-transparent border-none focus:outline-none cursor-pointer"
                 >
                   {SUBJECTS.map((s) => (
@@ -269,6 +365,25 @@ export default function ChatPage() {
                 }`}
               >
                 <p className="whitespace-pre-wrap">{msg.text}</p>
+
+                {msg.sender === "assistant" && (
+                  <button
+                    type="button"
+                    onClick={() => handleListen(msg)}
+                    disabled={speechLoadingId === msg.id}
+                    className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-[#C7D2FE] bg-[#EEF2FF] px-3 py-1.5 text-[11px] font-semibold text-[#4F46E5] transition-colors hover:bg-[#E0E7FF] disabled:cursor-wait disabled:opacity-60"
+                    title={playingMessageId === msg.id ? "Pause audio" : "Read this answer aloud"}
+                  >
+                    {speechLoadingId === msg.id ? (
+                      <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
+                    ) : playingMessageId === msg.id ? (
+                      <Pause className="h-3.5 w-3.5" />
+                    ) : (
+                      <Volume2 className="h-3.5 w-3.5" />
+                    )}
+                    {speechLoadingId === msg.id ? "Preparing audio..." : playingMessageId === msg.id ? "Pause" : "Listen"}
+                  </button>
+                )}
 
                 {/* Mathematical Formula Card matching Visual Plan #2 */}
                 {msg.formula && (
@@ -326,6 +441,8 @@ export default function ChatPage() {
               </div>
             </div>
           ))}
+
+          {speechError && <p className="text-center text-[11px] text-rose-600">{speechError}</p>}
 
           {isTyping && (
             <div className="flex gap-2.5 items-center text-xs text-slate-400">

@@ -18,6 +18,5 @@ export default async function DashboardRedirectPage() {
     redirect("/learner/dashboard");
   }
 
-  // No cookie set — send to login
   redirect("/login");
 }
