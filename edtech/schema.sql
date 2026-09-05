@@ -1,3 +1,6 @@
+
+
+
 -- ============================================================
 -- EduHub – Supabase / PostgreSQL Schema  (Phase 1)
 -- Paste into Supabase Dashboard → SQL Editor and Run All.
