@@ -4,6 +4,8 @@
 -- profile sync via PostgreSQL triggers.
 -- ============================================================
 
+create extension if not exists "pgcrypto";
+
 -- 1. Custom User Role Enum
 do $$
 begin
@@ -104,3 +106,61 @@ create policy "Admins can view all profiles"
       where id = auth.uid() and role = 'admin'
     )
   );
+
+-- 5. Student library metadata
+-- Documents belong in Supabase Storage, not in the repository or this table.
+create table if not exists public.books (
+  id uuid primary key default gen_random_uuid(),
+  title text not null,
+  subject text,
+  level text,
+  country text not null default 'Uganda',
+  curriculum text,
+  resource_type text not null default 'textbook',
+  publisher text,
+  author text,
+  description text,
+  cover_url text,
+  storage_path text,
+  document_url text,
+  source_attribution text,
+  content_status text not null default 'metadata_only',
+  content_license text,
+  publication_year integer,
+  is_digital boolean not null default true,
+  stock_quantity integer not null default 0,
+  created_at timestamptz not null default now(),
+  check (resource_type in ('textbook', 'syllabus', 'teacher_guide', 'revision', 'notes', 'other')),
+  check (content_status in ('available', 'metadata_only', 'restricted'))
+);
+
+create index if not exists books_level_subject_idx on public.books (level, subject);
+create index if not exists books_curriculum_idx on public.books (curriculum);
+alter table public.books enable row level security;
+
+drop policy if exists "Anyone can view published library metadata" on public.books;
+create policy "Anyone can view published library metadata"
+  on public.books for select
+  using (content_status <> 'restricted');
+
+-- Borrowed resources are distinct from payments: a learner can save a resource
+-- before content is attached, and access is granted only when content is available.
+create table if not exists public.library_borrows (
+  id uuid primary key default gen_random_uuid(),
+  learner_id uuid not null references public.profiles(id) on delete cascade,
+  book_id uuid not null references public.books(id) on delete cascade,
+  status text not null default 'active',
+  borrowed_at timestamptz not null default now(),
+  returned_at timestamptz,
+  unique (learner_id, book_id),
+  check (status in ('active', 'returned'))
+);
+
+create index if not exists library_borrows_learner_idx on public.library_borrows (learner_id, status);
+alter table public.library_borrows enable row level security;
+
+drop policy if exists "Learners manage their library borrows" on public.library_borrows;
+create policy "Learners manage their library borrows"
+  on public.library_borrows for all
+  using (auth.uid() = learner_id)
+  with check (auth.uid() = learner_id);
