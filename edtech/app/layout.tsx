@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import Sidebar from "@/components/Sidebar";
-import HeaderBar from "@/components/HeaderBar";
+import AppShell from "@/components/AppShell";
 import { UserProvider } from "@/context/user-context";
 
 const inter = Inter({
@@ -26,20 +25,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" suppressHydrationWarning data-scroll-behavior="smooth" className={inter.variable}>
       <body className="bg-[#f8fafc] text-slate-900 antialiased selection:bg-indigo-600 selection:text-white">
         <UserProvider>
-          <div className="flex h-dvh overflow-hidden bg-[#f8fafc]">
-            {/* Dark Navy Sidebar matching LEARN+ Visual Plan */}
-            <Sidebar />
-
-            {/* Main view container */}
-            <div className="flex flex-col flex-1 min-w-0 md:pl-64 transition-all duration-300 bg-[#f8fafc]">
-              <HeaderBar />
-
-              {/* Page content */}
-              <main className="flex-1 overflow-y-auto p-5 md:p-8 pb-20 md:pb-8 bg-[#f8fafc]">
-                {children}
-              </main>
-            </div>
-          </div>
+          <AppShell>{children}</AppShell>
         </UserProvider>
       </body>
     </html>

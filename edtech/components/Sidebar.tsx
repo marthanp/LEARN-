@@ -13,65 +13,106 @@ import {
   ChevronRight,
   Headphones,
   Settings,
-  HelpCircle,
   Sparkles,
+  LogOut,
+  Bookmark,
+  CalendarDays,
+  DollarSign,
+  ClipboardList,
+  UserCog,
+  CheckSquare,
+  ScrollText,
+  BarChart3,
+  ShieldCheck,
+  GraduationCap,
+  BookMarked,
 } from "lucide-react";
 import { useUser } from "@/context/user-context";
+import { signOutAction } from "@/app/actions/auth";
 
-const NAV_ITEMS = [
-  {
-    href: "/dashboard",
-    label: "Dashboard",
-    icon: LayoutDashboard,
-  },
-  {
-    href: "/chat",
-    label: "AI Study",
-    icon: Bot,
-    badge: "AI",
-  },
-  {
-    href: "/marketplace",
-    label: "Marketplace",
-    icon: BookOpen,
-  },
-  {
-    href: "/tutors",
-    label: "Tutors",
-    icon: Users,
-  },
-  {
-    href: "/study-room",
-    label: "Focus Room",
-    icon: Headphones,
-  },
-  {
-    href: "/plans",
-    label: "Plans",
-    icon: CreditCard,
-  },
-];
+/* ─────────────────────────────────────────────────────────────
+   Role-specific navigation definitions
+───────────────────────────────────────────────────────────── */
+
+const LEARNER_NAV = {
+  sectionLabel: "LEARNER PORTAL",
+  sectionColor: "text-indigo-400",
+  sectionBg: "bg-indigo-500/10 border-indigo-500/20",
+  sectionDot: "bg-indigo-400",
+  items: [
+    { href: "/learner/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/marketplace",       label: "Marketplace",        subLabel: "Books & UNEB Papers", icon: BookOpen },
+    { href: "/chat",              label: "AI Study Chatbot",   icon: Bot,          badge: "AI" },
+    { href: "/tutors",            label: "Book a Tutor",       icon: Users },
+    { href: "/marketplace",       label: "My Rentals & Requests", icon: Bookmark },
+    { href: "/plans",             label: "Subscriptions",      icon: CreditCard },
+  ],
+};
+
+const TUTOR_NAV = {
+  sectionLabel: "TUTOR PORTAL",
+  sectionColor: "text-purple-400",
+  sectionBg: "bg-purple-500/10 border-purple-500/20",
+  sectionDot: "bg-purple-400",
+  items: [
+    { href: "/tutor/dashboard",  label: "Dashboard",            icon: LayoutDashboard },
+    { href: "/tutor/sessions",   label: "My Sessions",          icon: CalendarDays },
+    { href: "/tutor/calendar",   label: "Availability Calendar",icon: ClipboardList },
+    { href: "/tutor/earnings",   label: "Earnings & Rates",     icon: DollarSign },
+    { href: "/tutor/requests",   label: "Student Requests",     icon: Users },
+    { href: "/tutor/profile",    label: "Profile Settings",     icon: UserCog },
+  ],
+};
+
+const ADMIN_NAV = {
+  sectionLabel: "ADMIN PORTAL",
+  sectionColor: "text-amber-400",
+  sectionBg: "bg-amber-500/10 border-amber-500/20",
+  sectionDot: "bg-amber-400",
+  items: [
+    { href: "/admin/dashboard",    label: "Admin Console",          icon: LayoutDashboard },
+    { href: "/admin/users",        label: "User Management",        icon: Users },
+    { href: "/admin/catalog",      label: "Book Catalog Approval",  icon: BookMarked },
+    { href: "/admin/verification", label: "Tutor Verification",     icon: CheckSquare },
+    { href: "/admin/audit",        label: "System Audit Logs",      icon: ScrollText },
+    { href: "/admin/analytics",    label: "Analytics",              icon: BarChart3 },
+  ],
+};
+
+type NavDef = typeof LEARNER_NAV;
 
 export default function Sidebar() {
-  const pathname = usePathname();
+  const pathname  = usePathname();
   const [collapsed, setCollapsed] = useState(false);
-  const { user } = useUser();
+  const { user }  = useUser();
+
+  const isTutor = user.role === "tutor";
+  const isAdmin = user.role === "admin";
+
+  const navDef: NavDef = isAdmin ? ADMIN_NAV : isTutor ? TUTOR_NAV : LEARNER_NAV;
+
+  const isActive = (href: string, label: string) => {
+    const dashboardish = href.includes("/dashboard") || label === "Dashboard";
+    if (dashboardish) {
+      return pathname === href || pathname.startsWith(href + "/");
+    }
+    return pathname === href || pathname.startsWith(href + "/");
+  };
 
   return (
     <>
-      {/* ── Sidebar matching LEARN+ Dark Navy Style ───────────────────────── */}
+      {/* ── Desktop Sidebar ───────────────────────────────────────── */}
       <aside
         className={[
           "hidden md:flex flex-col fixed left-0 top-0 h-full z-40 transition-all duration-300 ease-in-out",
-          "border-r border-slate-800/60",
-          "bg-[#0F172A] text-slate-300",
+          "border-r border-slate-800/60 bg-[#0F172A] text-slate-300",
           collapsed ? "w-[72px]" : "w-64",
         ].join(" ")}
       >
-        {/* Brand: LEARN+ */}
+        {/* Brand */}
         <div
           className={[
-            "flex items-center h-18 px-5 border-b border-slate-800/80 shrink-0",
+            "flex items-center h-[72px] px-5 border-b border-slate-800/80 shrink-0",
             collapsed ? "justify-center" : "gap-2.5",
           ].join(" ")}
         >
@@ -90,38 +131,58 @@ export default function Sidebar() {
           )}
         </div>
 
-        {/* Nav links */}
-        <nav className="flex-1 py-5 px-3 space-y-1.5 overflow-y-auto overflow-x-hidden">
-          {NAV_ITEMS.map(({ href, label, icon: Icon, badge }) => {
-            const active =
-              pathname === href || (href !== "/dashboard" && pathname.startsWith(href + "/"));
+        {/* Role Section Label */}
+        {!collapsed && (
+          <div className={`mx-3 mt-4 mb-1 px-3 py-1.5 rounded-xl border flex items-center gap-2 ${navDef.sectionBg}`}>
+            <span className={`w-2 h-2 rounded-full ${navDef.sectionDot} animate-pulse shrink-0`} />
+            <span className={`text-[10px] font-extrabold tracking-widest uppercase ${navDef.sectionColor}`}>
+              {navDef.sectionLabel}
+            </span>
+          </div>
+        )}
+
+        {/* Nav Links */}
+        <nav className="flex-1 py-3 px-3 space-y-0.5 overflow-y-auto overflow-x-hidden">
+          {navDef.items.map(({ href, label, subLabel, icon: Icon, badge }, idx) => {
+            const active = isActive(href, label);
+            // Deduplicate active highlight: if same href appears twice, only highlight the first match
+            const sameHrefBefore = navDef.items.slice(0, idx).some((i) => i.href === href);
+            const showActive = active && !sameHrefBefore;
+
             return (
               <Link
-                key={href}
+                key={`${href}-${idx}`}
                 href={href}
                 title={collapsed ? label : undefined}
                 className={[
                   "group flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-all duration-150",
-                  active
-                    ? "sidebar-active"
+                  showActive
+                    ? "sidebar-active bg-[#4F46E5] text-white shadow-sm"
                     : "text-slate-400 hover:text-white hover:bg-slate-800/60",
                   collapsed ? "justify-center px-0" : "",
                 ].join(" ")}
               >
                 <Icon
                   className={[
-                    "h-5 w-5 shrink-0 transition-colors",
-                    active ? "text-white" : "text-slate-400 group-hover:text-slate-200",
+                    "h-[18px] w-[18px] shrink-0 transition-colors",
+                    showActive ? "text-white" : "text-slate-400 group-hover:text-slate-200",
                   ].join(" ")}
                 />
                 {!collapsed && (
                   <>
-                    <span className="flex-1 truncate">{label}</span>
+                    <div className="flex-1 min-w-0">
+                      <span className="truncate block leading-tight">{label}</span>
+                      {subLabel && (
+                        <span className={`text-[10px] font-medium leading-none ${showActive ? "text-white/70" : "text-slate-500"}`}>
+                          {subLabel}
+                        </span>
+                      )}
+                    </div>
                     {badge && (
                       <span
                         className={[
-                          "text-[10px] font-bold px-1.5 py-0.5 rounded-md",
-                          active
+                          "text-[10px] font-bold px-1.5 py-0.5 rounded-md shrink-0",
+                          showActive
                             ? "bg-white/20 text-white"
                             : "bg-[#4F46E5]/20 text-[#818CF8] border border-[#4F46E5]/30",
                         ].join(" ")}
@@ -136,9 +197,9 @@ export default function Sidebar() {
           })}
         </nav>
 
-        {/* User Identity at Bottom of Sidebar */}
+        {/* User Identity Card */}
         {!collapsed ? (
-          <div className="p-3 mx-3 mb-3 rounded-2xl bg-slate-800/50 border border-slate-700/60 flex items-center gap-3">
+          <div className="p-3 mx-3 mb-2 rounded-2xl bg-slate-800/50 border border-slate-700/60 flex items-center gap-3">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={user.avatarUrl}
@@ -147,8 +208,8 @@ export default function Sidebar() {
             />
             <div className="flex-1 min-w-0">
               <p className="text-xs font-bold text-white truncate">{user.fullName}</p>
-              <p className="text-[11px] text-slate-400 capitalize truncate">
-                {user.role} • {user.subscriptionTier}
+              <p className={`text-[10px] font-semibold capitalize truncate ${navDef.sectionColor}`}>
+                {user.role} · {user.subscriptionTier}
               </p>
             </div>
           </div>
@@ -163,7 +224,25 @@ export default function Sidebar() {
           </div>
         )}
 
-        {/* Collapse toggle */}
+        {/* Sign Out */}
+        <div className="px-3 pb-2">
+          <form action={signOutAction}>
+            <button
+              type="submit"
+              title="Sign Out"
+              className={[
+                "flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-all",
+                "text-rose-400 hover:text-white hover:bg-rose-600/30 border border-transparent hover:border-rose-500/30",
+                collapsed ? "justify-center px-0" : "",
+              ].join(" ")}
+            >
+              <LogOut className="h-[18px] w-[18px] shrink-0" />
+              {!collapsed && <span className="flex-1 truncate text-left">Sign Out</span>}
+            </button>
+          </form>
+        </div>
+
+        {/* Collapse Toggle */}
         <div className="shrink-0 p-3 border-t border-slate-800/80">
           <button
             id="sidebar-collapse-toggle"
@@ -183,21 +262,25 @@ export default function Sidebar() {
         </div>
       </aside>
 
-      {/* ── Mobile bottom tab bar ─────────────────────────────────────────── */}
-      <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-[#0F172A] border-t border-slate-800 flex items-center justify-around px-2 h-16 text-slate-400">
-        {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
-          const active = pathname === href || pathname.startsWith(href + "/");
+      {/* ── Mobile Bottom Tab Bar ─────────────────────────────────── */}
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-[#0F172A] border-t border-slate-800 flex items-center justify-around px-1 h-16 text-slate-400">
+        {navDef.items.slice(0, 5).map(({ href, label, icon: Icon }, idx) => {
+          const active = isActive(href, label);
+          const sameHrefBefore = navDef.items.slice(0, idx).some((i) => i.href === href);
+          const showActive = active && !sameHrefBefore;
           return (
             <Link
-              key={href}
+              key={`mob-${href}-${idx}`}
               href={href}
               className={[
-                "flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition-colors",
-                active ? "text-[#4F46E5] font-bold" : "text-slate-400",
+                "flex flex-col items-center gap-0.5 px-2 py-1 rounded-xl transition-colors min-w-0",
+                showActive ? "text-[#4F46E5] font-bold" : "text-slate-400",
               ].join(" ")}
             >
-              <Icon className="h-5 w-5" />
-              <span className="text-[10px] font-medium">{label.split(" ")[0]}</span>
+              <Icon className="h-5 w-5 shrink-0" />
+              <span className="text-[9px] font-medium truncate max-w-[56px] text-center leading-tight">
+                {label.split(" ")[0]}
+              </span>
             </Link>
           );
         })}

@@ -7,8 +7,6 @@ import {
   Sparkles,
   ChevronDown,
   Check,
-  UserCheck,
-  Shield,
   BookOpen,
   Users,
   Bot,
@@ -20,6 +18,7 @@ import {
 } from "lucide-react";
 import { useUser, SubscriptionTier, UserRole } from "@/context/user-context";
 import { useRouter } from "next/navigation";
+import { signOutAction } from "@/app/actions/auth";
 
 const TIER_CONFIG: Record<SubscriptionTier, { label: string; className: string; pill: string }> = {
   free: { label: "Free", className: "tier-free", pill: "bg-slate-100 text-slate-700 border-slate-200" },
@@ -27,9 +26,11 @@ const TIER_CONFIG: Record<SubscriptionTier, { label: string; className: string; 
   pro:  { label: "Pro ✦", className: "tier-pro", pill: "bg-amber-50 text-amber-700 border-amber-200" },
 };
 
-const ROLE_CONFIG: Record<UserRole, { label: string; pill: string }> = {
-  student: { label: "Student", pill: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+const ROLE_CONFIG: Record<string, { label: string; pill: string }> = {
+  learner: { label: "Learner", pill: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+  student: { label: "Learner", pill: "bg-emerald-50 text-emerald-700 border-emerald-200" },
   tutor:   { label: "Tutor", pill: "bg-purple-50 text-purple-700 border-purple-200" },
+  admin:   { label: "Admin", pill: "bg-amber-50 text-amber-700 border-amber-200" },
 };
 
 interface SearchResultItem {
@@ -205,14 +206,19 @@ export default function HeaderBar() {
                 <label className="text-xs font-bold text-slate-700 block mb-1.5">Switch Role</label>
                 <div className="space-y-1.5">
                   {[
-                    { id: "student" as UserRole, label: "Student", desc: "Access student features" },
-                    { id: "tutor" as UserRole, label: "Tutor", desc: "Access tutor features & requests" },
+                    { id: "learner" as UserRole, label: "Learner (Student)", desc: "Student study hub & courses" },
+                    { id: "tutor" as UserRole, label: "Tutor (Instructor)", desc: "Instructor console & bookings" },
+                    { id: "admin" as UserRole, label: "Administrator", desc: "Platform RBAC & security console" },
                   ].map((r) => (
                     <button
                       key={r.id}
-                      onClick={() => setRole(r.id)}
+                      onClick={() => {
+                        setRole(r.id);
+                        setDropdownOpen(false);
+                        router.push(`/${r.id}/dashboard`);
+                      }}
                       className={`w-full flex items-center justify-between p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
-                        user.role === r.id
+                        user.role === r.id || (r.id === "learner" && user.role === "student")
                           ? "bg-[#EEF2FF] border-[#4F46E5] text-slate-900"
                           : "border-slate-100 hover:bg-slate-50 text-slate-600"
                       }`}
@@ -221,7 +227,9 @@ export default function HeaderBar() {
                         <p className="text-xs font-bold text-slate-900">{r.label}</p>
                         <p className="text-[10px] text-slate-400">{r.desc}</p>
                       </div>
-                      {user.role === r.id && <Check className="h-4 w-4 text-[#4F46E5] shrink-0" />}
+                      {(user.role === r.id || (r.id === "learner" && user.role === "student")) && (
+                        <Check className="h-4 w-4 text-[#4F46E5] shrink-0" />
+                      )}
                     </button>
                   ))}
                 </div>
@@ -259,9 +267,14 @@ export default function HeaderBar() {
                 <span className="hover:text-[#4F46E5] cursor-pointer flex items-center gap-1 font-medium">
                   <SlidersHorizontal className="h-3 w-3" /> Manage Account
                 </span>
-                <span className="hover:text-rose-600 cursor-pointer flex items-center gap-1 font-medium">
-                  <LogOut className="h-3 w-3" /> Sign out
-                </span>
+                <form action={signOutAction}>
+                  <button
+                    type="submit"
+                    className="hover:text-rose-600 cursor-pointer flex items-center gap-1 font-medium text-slate-500 transition-colors"
+                  >
+                    <LogOut className="h-3 w-3" /> Sign out
+                  </button>
+                </form>
               </div>
             </div>
           )}
