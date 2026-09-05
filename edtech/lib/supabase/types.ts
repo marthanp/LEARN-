@@ -6,7 +6,7 @@
 
 export type Json = string | number | boolean | null | { [key: string]: Json } | Json[];
 
-export type UserRole         = "student" | "tutor";
+export type UserRole         = "learner" | "tutor" | "admin" | "student";
 export type SubscriptionTier = "free" | "plus" | "pro";
 export type RentalStatus     = "active" | "returned";
 export type BookingStatus    = "pending" | "confirmed" | "completed";
