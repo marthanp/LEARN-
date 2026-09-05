@@ -39,7 +39,7 @@ const TUTORS_CATALOG: Tutor[] = [
   {
     id: "t1",
     name: "Brian Ssemakula",
-    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&auto=format&fit=crop&q=80",
+    avatar: "https://images.unsplash.com/photo-1504257432389-52343af06ae3?w=200&auto=format&fit=crop&q=80",
     subject: "Mathematics Tutor",
     category: "Math",
     rate: 55500,
@@ -52,7 +52,7 @@ const TUTORS_CATALOG: Tutor[] = [
   {
     id: "t2",
     name: "Maria Nanyonjo",
-    avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=200&auto=format&fit=crop&q=80",
+    avatar: "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?w=200&auto=format&fit=crop&q=80",
     subject: "Biology Tutor",
     category: "Biology",
     rate: 44400,
@@ -65,7 +65,7 @@ const TUTORS_CATALOG: Tutor[] = [
   {
     id: "t3",
     name: "Peter Okello",
-    avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&auto=format&fit=crop&q=80",
+    avatar: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=200&auto=format&fit=crop&q=80",
     subject: "Physics Tutor",
     category: "Physics",
     rate: 55500,
