@@ -152,7 +152,6 @@ export default function ChatPage() {
     };
   }, []);
 
-<<<<<<< HEAD
   const startNewChat = () => {
     chatSessionRef.current += 1;
     audioRef.current?.pause();
@@ -167,25 +166,12 @@ export default function ChatPage() {
     setSpeechError(null);
   };
 
-  const maxMessages = user.subscriptionTier === "free" ? 5 : user.subscriptionTier === "plus" ? 50 : 999999;
-  const isLimitReached = aiMessagesCount >= maxMessages && user.subscriptionTier === "free";
-=======
->>>>>>> 96ebfd2 (payment)
-
   const handleSend = async (textToSend?: string) => {
     const text = textToSend || input.trim();
     if (!text || isTyping) return;
 
-<<<<<<< HEAD
     const chatSession = chatSessionRef.current;
 
-    if (isLimitReached) {
-      alert("You have reached your daily Free tier limit (5 queries). Upgrade to Plus or Pro for more!");
-      return;
-    }
-
-=======
->>>>>>> 96ebfd2 (payment)
     const userMsg: ChatMessage = {
       id: `usr_${Date.now()}`,
       sender: "user",

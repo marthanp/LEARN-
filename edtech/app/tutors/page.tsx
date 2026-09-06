@@ -1,4 +1,4 @@
-git add"use client";
+"use client";
 
 import { useState } from "react";
 import {
@@ -12,11 +12,9 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useUser } from "@/context/user-context";
-<<<<<<< HEAD
 import { formatUgx } from "@/lib/currency";
 import FeedbackPanel from "@/components/FeedbackPanel";
-=======
->>>>>>> 96ebfd2 (payment)
+
 
 export interface Tutor {
   id: string;

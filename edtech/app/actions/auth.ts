@@ -1,267 +1,309 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { cookies } from "next/headers";
-import { createClient } from "@/lib/supabase/server";
-import { auth, clerkClient } from "@clerk/nextjs/server";
+import { auth, clerkClient, currentUser } from "@clerk/nextjs/server";
 
 export type AuthState = {
   error?: string | null;
   success?: boolean;
 };
 
-/**
- * Normalizes role string to valid dashboard route: 'learner' | 'tutor' | 'admin'
- */
-function normalizeRole(roleRaw: unknown): "learner" | "tutor" | "admin" {
-  const role = String(roleRaw || "").toLowerCase().trim();
-  if (role === "tutor") return "tutor";
-  if (role === "admin") return "admin";
-  return "learner"; // default learner (also treats 'student' as learner)
-}
-
-function isSupabaseConfigured(): boolean {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  return Boolean(
-    url &&
-    key &&
-    !url.includes("your-project-id") &&
-    url.startsWith("http")
-  );
-}
-
-/**
- * Sign up action — registers new user and records full_name and role in metadata.
- * Sets role session cookie and redirects directly to the selected role dashboard.
- */
-export async function signUpAction(
-  prevState: AuthState | null | FormData,
-  formDataOrEmpty?: FormData
-): Promise<AuthState> {
-  const formData =
-    formDataOrEmpty instanceof FormData
-      ? formDataOrEmpty
-      : prevState instanceof FormData
-      ? prevState
-      : null;
-
-  if (!formData) {
-    return { error: "Invalid form submission." };
-  }
-
-  const fullName = (formData.get("full_name") as string)?.trim();
-  const email = (formData.get("email") as string)?.trim().toLowerCase();
-  const password = formData.get("password") as string;
-  const requestedRole = String(formData.get("role") || "").toLowerCase();
-  const role: "learner" | "tutor" = requestedRole === "tutor" ? "tutor" : "learner";
-
-  if (!fullName || !email || !password) {
-    return { error: "Please provide your full name, email, and password." };
-  }
-
-  if (password.length < 6) {
-    return { error: "Password must be at least 6 characters long." };
-  }
-
-  if (isSupabaseConfigured()) {
-    try {
-      const supabase = await createClient();
-
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            full_name: fullName,
-            role: role,
-          },
-        },
-      });
-
-      if (error) {
-        const isNetworkErr =
-          error.message?.toLowerCase().includes("fetch failed") ||
-          error.message?.toLowerCase().includes("network");
-
-        if (!isNetworkErr) {
-          return { error: error.message };
-        }
-      }
-    } catch (err: unknown) {
-      console.warn("Supabase auth signUp offline/failed, proceeding in local session:", err);
-    }
-  }
-
-  // Redirect directly to the portal for the role they've registered for
-  redirect(`/${role}/dashboard`);
-}
-
-/**
- * Login action — signs in user, fetches assigned role,
- * and routes directly to the corresponding role dashboard.
- */
-export async function loginAction(
-  prevState: AuthState | null | FormData,
-  formDataOrEmpty?: FormData
-): Promise<AuthState> {
-  const formData =
-    formDataOrEmpty instanceof FormData
-      ? formDataOrEmpty
-      : prevState instanceof FormData
-      ? prevState
-      : null;
-
-  if (!formData) {
-    return { error: "Invalid form submission." };
-  }
-
-  const email = (formData.get("email") as string)?.trim().toLowerCase();
-  const password = formData.get("password") as string;
-
-  if (!email || !password) {
-    return { error: "Please enter both email and password." };
-  }
-
-  let userRole: "learner" | "tutor" | "admin" = "learner";
-
-  if (isSupabaseConfigured()) {
-    try {
-      const supabase = await createClient();
-
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) return { error: error.message };
-
-      if (data?.user) {
-        // Query public.profiles to retrieve the authenticated user's role
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("role")
-          .eq("id", data.user.id)
-          .single();
-
-        const profileRecord = profile as { role?: string } | null;
-        userRole = normalizeRole(profileRecord?.role || data.user.user_metadata?.role);
-      }
-    } catch (err: unknown) {
-      console.error("Supabase auth signIn failed:", err);
-      return { error: "Authentication service is unavailable. Please try again." };
-    }
-  } else {
-    return { error: "Authentication is not configured." };
-  }
-
-  redirect(`/${userRole}/dashboard`);
-}
-
-/**
- * Sign out action — logs out current session and redirects to /login.
- */
-export async function signOutAction() {
-  const cookieStore = await cookies();
-  cookieStore.delete("learn_user_role");
-  cookieStore.delete("learn_user_name");
-  cookieStore.delete("learn_user_email");
-
-  if (isSupabaseConfigured()) {
-    try {
-      const supabase = await createClient();
-      await supabase.auth.signOut();
-    } catch {
-      // ignore
-    }
-  }
-
-  try {
-    const session = await auth();
-    if (session.sessionId) await (await clerkClient()).sessions.revokeSession(session.sessionId);
-  } catch {
-    // Clerk is optional when the Supabase fallback is active.
-  }
-
-  redirect("/login");
-}
+export type UserRole = "learner" | "tutor" | "admin";
 
 export interface CurrentUserData {
   id: string;
   fullName: string;
   email: string;
-  role: "learner" | "tutor" | "admin";
+  role: UserRole;
   subscriptionTier: "free" | "plus" | "pro";
   subscriptionStatus: "active" | "expired" | "cancelled";
   avatarUrl?: string;
 }
 
-export async function getCurrentUserAction(): Promise<CurrentUserData | null> {
-  const { getServerIdentity } = await import("@/lib/auth/authorization");
-  const identity = await getServerIdentity();
-  if (!identity) return null;
+function normalizeRole(roleRaw: unknown): UserRole {
+  const role = String(roleRaw ?? "").toLowerCase().trim();
 
-  if (process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) {
-    try {
-      const { currentUser } = await import("@clerk/nextjs/server");
-      const clerkUser = await currentUser();
-      const fullName = clerkUser
-        ? `${clerkUser.firstName || ""} ${clerkUser.lastName || ""}`.trim() || clerkUser.username || "Learner"
-        : "Learner";
-      const email = clerkUser?.emailAddresses?.[0]?.emailAddress || "";
-      const avatarUrl = clerkUser?.imageUrl || "";
+  if (role === "admin") return "admin";
+  if (role === "tutor") return "tutor";
 
-      return {
-        id: identity.id,
-        fullName,
-        email,
-        role: identity.role,
-        subscriptionTier: identity.subscriptionTier,
-        subscriptionStatus: identity.subscriptionStatus,
-        avatarUrl,
-      };
-    } catch {
-      return {
-        id: identity.id,
-        fullName: "Learner",
-        email: "",
-        role: identity.role,
-        subscriptionTier: identity.subscriptionTier,
-        subscriptionStatus: identity.subscriptionStatus,
-      };
-    }
+  return "learner";
+}
+
+function normalizeSubscriptionTier(value: unknown): "free" | "plus" | "pro" {
+  const tier = String(value ?? "").toLowerCase().trim();
+
+  if (tier === "plus") return "plus";
+  if (tier === "pro") return "pro";
+
+  return "free";
+}
+
+function normalizeSubscriptionStatus(
+  value: unknown
+): "active" | "expired" | "cancelled" {
+  const status = String(value ?? "").toLowerCase().trim();
+
+  if (status === "expired") return "expired";
+  if (status === "cancelled") return "cancelled";
+
+  return "active";
+}
+
+/**
+ * Get the role stored in Clerk public metadata.
+ *
+ * Public metadata is appropriate here because the role is needed by
+ * server-side authorization and can also be read by frontend code.
+ */
+function getRoleFromMetadata(
+  publicMetadata: Record<string, unknown> | undefined,
+  unsafeMetadata: Record<string, unknown> | undefined
+): UserRole {
+  return normalizeRole(
+    publicMetadata?.role ??
+      unsafeMetadata?.role ??
+      publicMetadata?.userRole ??
+      unsafeMetadata?.userRole
+  );
+}
+
+/**
+ * Get the subscription information stored in Clerk metadata.
+ */
+function getSubscriptionFromMetadata(
+  publicMetadata: Record<string, unknown> | undefined,
+  unsafeMetadata: Record<string, unknown> | undefined
+) {
+  return {
+    tier: normalizeSubscriptionTier(
+      publicMetadata?.subscriptionTier ??
+        unsafeMetadata?.subscriptionTier ??
+        publicMetadata?.plan ??
+        unsafeMetadata?.plan
+    ),
+    status: normalizeSubscriptionStatus(
+      publicMetadata?.subscriptionStatus ??
+        unsafeMetadata?.subscriptionStatus ??
+        publicMetadata?.planStatus ??
+        unsafeMetadata?.planStatus
+    ),
+  };
+}
+
+/**
+ * Returns the currently authenticated Clerk user.
+ *
+ * This is the main authentication helper for the application.
+ */
+export async function getCurrentClerkUser() {
+  const { userId } = await auth();
+
+  if (!userId) {
+    return null;
   }
 
-  if (isSupabaseConfigured()) {
-    try {
-      const supabase = await createClient();
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("full_name, email, avatar_url")
-        .eq("id", identity.id)
-        .single();
-      const p = profile as { full_name?: string; email?: string; avatar_url?: string } | null;
-      return {
-        id: identity.id,
-        fullName: p?.full_name || "Learner",
-        email: p?.email || "",
-        role: identity.role,
-        subscriptionTier: identity.subscriptionTier,
-        subscriptionStatus: identity.subscriptionStatus,
-        avatarUrl: p?.avatar_url,
-      };
-    } catch {
-      // fallback
-    }
+  return currentUser();
+}
+
+/**
+ * Return the authenticated user's application profile.
+ *
+ * Authentication comes entirely from Clerk.
+ * Supabase is intentionally not used for login/logout here.
+ */
+export async function getCurrentUserAction(): Promise<CurrentUserData | null> {
+  const user = await getCurrentClerkUser();
+
+  if (!user) {
+    return null;
+  }
+
+  const publicMetadata =
+    (user.publicMetadata as Record<string, unknown> | undefined) ?? undefined;
+
+  const unsafeMetadata =
+    (user.unsafeMetadata as Record<string, unknown> | undefined) ?? undefined;
+
+  const role = getRoleFromMetadata(publicMetadata, unsafeMetadata);
+
+  const subscription = getSubscriptionFromMetadata(
+    publicMetadata,
+    unsafeMetadata
+  );
+
+  const firstName = user.firstName?.trim() ?? "";
+  const lastName = user.lastName?.trim() ?? "";
+
+  const fullName =
+    `${firstName} ${lastName}`.trim() ||
+    user.username?.trim() ||
+    "Learner";
+
+  const email = user.primaryEmailAddress?.emailAddress ?? "";
+
+  return {
+    id: user.id,
+    fullName,
+    email,
+    role,
+    subscriptionTier: subscription.tier,
+    subscriptionStatus: subscription.status,
+    avatarUrl: user.imageUrl ?? undefined,
+  };
+}
+
+/**
+ * Get the current user's role from Clerk.
+ */
+export async function getCurrentUserRole(): Promise<UserRole | null> {
+  const user = await getCurrentClerkUser();
+
+  if (!user) {
+    return null;
+  }
+
+  const publicMetadata =
+    (user.publicMetadata as Record<string, unknown> | undefined) ?? undefined;
+
+  const unsafeMetadata =
+    (user.unsafeMetadata as Record<string, unknown> | undefined) ?? undefined;
+
+  return getRoleFromMetadata(publicMetadata, unsafeMetadata);
+}
+
+/**
+ * Require an authenticated Clerk user.
+ *
+ * Server-side code can use this before performing protected operations.
+ */
+export async function requireAuthenticatedUser() {
+  const { isAuthenticated, userId } = await auth();
+
+  if (!isAuthenticated || !userId) {
+    throw new Error("You must be signed in to continue.");
+  }
+
+  return userId;
+}
+
+/**
+ * Require a specific application role.
+ *
+ * Admin automatically has access to all role-protected areas.
+ */
+export async function requireRole(requiredRole: Exclude<UserRole, "admin">) {
+  const user = await getCurrentClerkUser();
+
+  if (!user) {
+    throw new Error("You must be signed in to continue.");
+  }
+
+  const publicMetadata =
+    (user.publicMetadata as Record<string, unknown> | undefined) ?? undefined;
+
+  const unsafeMetadata =
+    (user.unsafeMetadata as Record<string, unknown> | undefined) ?? undefined;
+
+  const role = getRoleFromMetadata(publicMetadata, unsafeMetadata);
+
+  if (role !== requiredRole && role !== "admin") {
+    throw new Error("You are not authorized to access this resource.");
   }
 
   return {
-    id: identity.id,
-    fullName: "Learner",
-    email: "",
-    role: identity.role,
-    subscriptionTier: identity.subscriptionTier,
-    subscriptionStatus: identity.subscriptionStatus,
+    userId: user.id,
+    role,
   };
+}
+
+/**
+ * Require admin access.
+ */
+export async function requireAdmin() {
+  const user = await getCurrentClerkUser();
+
+  if (!user) {
+    throw new Error("You must be signed in to continue.");
+  }
+
+  const publicMetadata =
+    (user.publicMetadata as Record<string, unknown> | undefined) ?? undefined;
+
+  const unsafeMetadata =
+    (user.unsafeMetadata as Record<string, unknown> | undefined) ?? undefined;
+
+  const role = getRoleFromMetadata(publicMetadata, unsafeMetadata);
+
+  if (role !== "admin") {
+    throw new Error("Administrator access required.");
+  }
+
+  return {
+    userId: user.id,
+    role,
+  };
+}
+
+/**
+ * Legacy compatibility action.
+ *
+ * The actual sign-in UI is handled by Clerk's <SignIn /> component.
+ * This action deliberately does not authenticate with Supabase.
+ */
+export async function loginAction(): Promise<AuthState> {
+  const user = await getCurrentClerkUser();
+
+  if (user) {
+    const role = await getCurrentUserRole();
+
+    redirect(`/${role ?? "learner"}/dashboard`);
+  }
+
+  return {
+    error:
+      "Please use the Clerk sign-in form to authenticate. The application no longer uses Supabase for login.",
+  };
+}
+
+/**
+ * Legacy compatibility action.
+ *
+ * The actual sign-up flow is handled by Clerk's <SignUp /> component.
+ */
+export async function signUpAction(): Promise<AuthState> {
+  const user = await getCurrentClerkUser();
+
+  if (user) {
+    const role = await getCurrentUserRole();
+
+    redirect(`/${role ?? "learner"}/dashboard`);
+  }
+
+  return {
+    error:
+      "Please use the Clerk sign-up form to create your account. The application no longer uses Supabase for authentication.",
+  };
+}
+
+/**
+ * Server-side sign-out.
+ *
+ * The Clerk frontend normally handles sign-out through Clerk's signOut()
+ * function. This server action is provided for server-side callers.
+ */
+export async function signOutAction() {
+  const { sessionId } = await auth();
+
+  if (sessionId) {
+    const client = await clerkClient();
+
+    try {
+      await client.sessions.revokeSession(sessionId);
+    } catch (error) {
+      console.error("Failed to revoke Clerk session:", error);
+    }
+  }
+
+  redirect("/login");
 }
 

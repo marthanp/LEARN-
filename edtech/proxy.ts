@@ -1,9 +1,5 @@
-<<<<<<< HEAD
-import { createServerClient, type SetAllCookies } from "@supabase/ssr";
-=======
 import { createServerClient } from "@supabase/ssr";
 import { clerkMiddleware } from "@clerk/nextjs/server";
->>>>>>> 96ebfd2 (payment)
 import { NextResponse, type NextRequest } from "next/server";
 
 type Role = "learner" | "tutor" | "admin";
@@ -40,18 +36,13 @@ async function supabaseProxy(request: NextRequest) {
     const supabase = createServerClient(supabaseUrl!, supabaseKey!, {
       cookies: {
         getAll: () => request.cookies.getAll(),
-        setAll: ((cookiesToSet) => {
+        setAll: (cookiesToSet) => {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
           response = NextResponse.next({ request });
-<<<<<<< HEAD
           cookiesToSet.forEach(({ name, value, options }) =>
             response.cookies.set(name, value, options)
           );
-        }) satisfies SetAllCookies,
-=======
-          cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
         },
->>>>>>> 96ebfd2 (payment)
       },
     });
     const { data: { user } } = await supabase.auth.getUser();

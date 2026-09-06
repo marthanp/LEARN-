@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useClerk } from "@clerk/nextjs";
 import {
   GraduationCap,
   Sparkles,
@@ -23,7 +24,6 @@ import {
   BookMarked,
   Check,
 } from "lucide-react";
-import { signOutAction } from "@/app/actions/auth";
 import { useUser } from "@/context/user-context";
 
 // ── Mock Data for Learner Portal ─────────────────────────────
@@ -168,6 +168,11 @@ const RECENT_CHATS: ChatSession[] = [
 
 export default function LearnerDashboardPage() {
   const { user } = useUser();
+  const { signOut } = useClerk();
+
+  const handleLogout = () => {
+    signOut({ redirectUrl: "/login" });
+  };
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto pb-12">
@@ -201,15 +206,14 @@ export default function LearnerDashboardPage() {
               </div>
             </div>
 
-            <form action={signOutAction}>
-              <button
-                type="submit"
-                className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white/10 hover:bg-rose-600/30 border border-white/15 hover:border-rose-500/40 text-xs font-semibold text-white transition-all cursor-pointer"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-                <span>Sign Out</span>
-              </button>
-            </form>
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white/10 hover:bg-rose-600/30 border border-white/15 hover:border-rose-500/40 text-xs font-semibold text-white transition-all cursor-pointer"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Sign Out</span>
+            </button>
           </div>
         </div>
       </div>
