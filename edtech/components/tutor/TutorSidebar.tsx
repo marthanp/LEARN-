@@ -18,7 +18,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { useUser } from "@/context/user-context";
-import { signOutAction } from "@/app/actions/auth";
+import ClerkSignOutButton from "@/components/ClerkSignOutButton";
 
 export const TUTOR_NAV_ITEMS = [
   {
@@ -63,7 +63,15 @@ export const TUTOR_NAV_ITEMS = [
 export default function TutorSidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
-  const { user } = useUser();
+  const { user, isLoading } = useUser();
+
+  const initials =
+    user.fullName
+      ?.split(" ")
+      .map((n) => n[0])
+      .slice(0, 2)
+      .join("")
+      .toUpperCase() || "TU";
 
   const isActive = (href: string) => {
     if (href === "/tutor/dashboard") {
@@ -177,49 +185,67 @@ export default function TutorSidebar() {
         {/* Tutor Identity Card */}
         {!collapsed ? (
           <div className="p-3 mx-3 mb-2 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center gap-3">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={user.avatarUrl || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80"}
-              alt={user.fullName}
-              className="h-9 w-9 rounded-xl object-cover ring-2 ring-purple-500/50 shrink-0"
-            />
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-1">
-                <p className="text-xs font-bold text-white truncate">{user.fullName}</p>
-                <CheckCircle2 className="w-3 h-3 text-emerald-400 shrink-0" />
+            {user.avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={user.avatarUrl}
+                alt={user.fullName}
+                className="h-9 w-9 rounded-xl object-cover ring-2 ring-purple-500/50 shrink-0"
+              />
+            ) : (
+              <div className="h-9 w-9 rounded-xl bg-purple-600/30 border border-purple-500/40 text-purple-300 font-bold text-xs flex items-center justify-center shrink-0">
+                {initials}
               </div>
-              <p className="text-[10px] font-semibold text-purple-400 truncate">
-                Verified Tutor • UGX 35k/hr
-              </p>
+            )}
+            <div className="flex-1 min-w-0">
+              {isLoading ? (
+                <>
+                  <div className="h-3 w-20 bg-slate-700 rounded animate-pulse mb-1" />
+                  <div className="h-2 w-16 bg-slate-700/60 rounded animate-pulse" />
+                </>
+              ) : (
+                <>
+                  <div className="flex items-center gap-1">
+                    <p className="text-xs font-bold text-white truncate">{user.fullName || "Tutor"}</p>
+                    <CheckCircle2 className="w-3 h-3 text-emerald-400 shrink-0" />
+                  </div>
+                  <p className="text-[10px] font-semibold text-purple-400 truncate">
+                    {user.email || "Verified Tutor"}
+                  </p>
+                </>
+              )}
             </div>
           </div>
         ) : (
           <div className="p-2 flex justify-center mb-2">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={user.avatarUrl || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80"}
-              alt={user.fullName}
-              className="h-8 w-8 rounded-xl object-cover ring-2 ring-purple-500/50"
-            />
+            {user.avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={user.avatarUrl}
+                alt={user.fullName}
+                className="h-8 w-8 rounded-xl object-cover ring-2 ring-purple-500/50"
+              />
+            ) : (
+              <div className="h-8 w-8 rounded-xl bg-purple-600/30 border border-purple-500/40 text-purple-300 font-bold text-xs flex items-center justify-center">
+                {initials}
+              </div>
+            )}
           </div>
         )}
 
         {/* Sign Out */}
         <div className="px-3 pb-2">
-          <form action={signOutAction}>
-            <button
-              type="submit"
-              title="Sign Out"
-              className={[
-                "flex w-full items-center gap-3 rounded-xl px-3.5 py-2 text-sm font-semibold transition-all",
-                "text-rose-400 hover:text-white hover:bg-rose-600/30 border border-transparent hover:border-rose-500/30",
-                collapsed ? "justify-center px-0" : "",
-              ].join(" ")}
-            >
-              <LogOut className="h-4 w-4 shrink-0" />
-              {!collapsed && <span className="flex-1 truncate text-left text-xs">Sign Out</span>}
-            </button>
-          </form>
+          <ClerkSignOutButton
+            title="Sign Out"
+            className=[
+              "flex w-full items-center gap-3 rounded-xl px-3.5 py-2 text-sm font-semibold transition-all",
+              "text-rose-400 hover:text-white hover:bg-rose-600/30 border border-transparent hover:border-rose-500/30",
+              collapsed ? "justify-center px-0" : "",
+            ].join(" ")}
+          >
+            <LogOut className="h-4 w-4 shrink-0" />
+            {!collapsed && <span className="flex-1 truncate text-left text-xs">Sign Out</span>}
+          </ClerkSignOutButton>
         </div>
 
         {/* Collapse Toggle */}

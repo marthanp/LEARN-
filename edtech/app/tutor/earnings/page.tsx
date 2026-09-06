@@ -269,7 +269,9 @@ export default function TutorEarningsPage() {
                   </div>
                   <div>
                     <div className="text-xs font-bold text-slate-900">MTN Mobile Money Uganda</div>
-                    <div className="text-[11px] text-slate-500 font-mono">+256 772 458 219 (Brian S.)</div>
+                    <div className="text-[11px] text-slate-500 font-mono">
+                      +256 772 458 219 ({user.fullName && user.fullName !== "Guest" ? user.fullName.split(" ")[0] : "Tutor"} S.)
+                    </div>
                   </div>
                 </div>
                 <span className="text-xs font-bold text-purple-700 bg-white px-3 py-1 rounded-xl border border-purple-200">
@@ -284,7 +286,9 @@ export default function TutorEarningsPage() {
                   </div>
                   <div>
                     <div className="text-xs font-bold text-slate-900">Airtel Money Uganda</div>
-                    <div className="text-[11px] text-slate-500 font-mono">+256 701 893 814 (Brian S.)</div>
+                    <div className="text-[11px] text-slate-500 font-mono">
+                      +256 701 893 814 ({user.fullName && user.fullName !== "Guest" ? user.fullName.split(" ")[0] : "Tutor"} S.)
+                    </div>
                   </div>
                 </div>
                 <span className="text-xs text-slate-400">Secondary</span>

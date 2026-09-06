@@ -29,7 +29,7 @@ import {
   ClipboardCheck,
 } from "lucide-react";
 import { useUser } from "@/context/user-context";
-import { signOutAction } from "@/app/actions/auth";
+import ClerkSignOutButton from "@/components/ClerkSignOutButton";
 
 /* ─────────────────────────────────────────────────────────────
    Role-specific navigation definitions
@@ -89,12 +89,19 @@ type NavDef = typeof LEARNER_NAV;
 export default function Sidebar() {
   const pathname  = usePathname();
   const [collapsed, setCollapsed] = useState(false);
-  const { user }  = useUser();
+  const { user, isLoading }  = useUser();
 
-  const isTutor = user.role === "tutor";
-  const isAdmin = user.role === "admin";
+  const isTutor = user.role === "tutor" || pathname.startsWith("/tutor");
+  const isAdmin = user.role === "admin" || pathname.startsWith("/admin");
 
   const navDef: NavDef = isAdmin ? ADMIN_NAV : isTutor ? TUTOR_NAV : LEARNER_NAV;
+
+  const initials = user.fullName
+    .split(" ")
+    .map((n) => n[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase() || "?";
 
   const isActive = (href: string, label: string) => {
     const dashboardish = href.includes("/dashboard") || label === "Dashboard";
@@ -205,46 +212,66 @@ export default function Sidebar() {
         {/* User Identity Card */}
         {!collapsed ? (
           <div className="p-3 mx-3 mb-2 rounded-2xl bg-slate-800/50 border border-slate-700/60 flex items-center gap-3">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={user.avatarUrl}
-              alt={user.fullName}
-              className="h-9 w-9 rounded-xl object-cover ring-2 ring-[#4F46E5]/40 shrink-0"
-            />
+            {isLoading ? (
+              <div className="h-9 w-9 rounded-xl bg-slate-700 animate-pulse shrink-0" />
+            ) : user.avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={user.avatarUrl}
+                alt={user.fullName}
+                className="h-9 w-9 rounded-xl object-cover ring-2 ring-[#4F46E5]/40 shrink-0"
+              />
+            ) : (
+              <div className="h-9 w-9 rounded-xl bg-[#4F46E5] flex items-center justify-center text-white text-xs font-bold shrink-0">
+                {initials}
+              </div>
+            )}
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-bold text-white truncate">{user.fullName}</p>
-              <p className={`text-[10px] font-semibold capitalize truncate ${navDef.sectionColor}`}>
-                {user.role} · {user.subscriptionTier}
-              </p>
+              {isLoading ? (
+                <>
+                  <div className="h-3 w-24 bg-slate-700 rounded animate-pulse mb-1" />
+                  <div className="h-2.5 w-16 bg-slate-700/60 rounded animate-pulse" />
+                </>
+              ) : (
+                <>
+                  <p className="text-xs font-bold text-white truncate">{user.fullName}</p>
+                  <p className={`text-[10px] font-semibold capitalize truncate ${navDef.sectionColor}`}>
+                    {user.role} · {user.subscriptionTier}
+                  </p>
+                </>
+              )}
             </div>
           </div>
         ) : (
           <div className="p-2 flex justify-center mb-2">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={user.avatarUrl}
-              alt={user.fullName}
-              className="h-8 w-8 rounded-xl object-cover ring-2 ring-[#4F46E5]/40"
-            />
+            {user.avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={user.avatarUrl}
+                alt={user.fullName}
+                className="h-8 w-8 rounded-xl object-cover ring-2 ring-[#4F46E5]/40"
+              />
+            ) : (
+              <div className="h-8 w-8 rounded-xl bg-[#4F46E5] flex items-center justify-center text-white text-xs font-bold">
+                {initials}
+              </div>
+            )}
           </div>
         )}
 
         {/* Sign Out */}
         <div className="px-3 pb-2">
-          <form action={signOutAction}>
-            <button
-              type="submit"
-              title="Sign Out"
-              className={[
-                "flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-all",
-                "text-rose-400 hover:text-white hover:bg-rose-600/30 border border-transparent hover:border-rose-500/30",
-                collapsed ? "justify-center px-0" : "",
-              ].join(" ")}
-            >
-              <LogOut className="h-[18px] w-[18px] shrink-0" />
-              {!collapsed && <span className="flex-1 truncate text-left">Sign Out</span>}
-            </button>
-          </form>
+          <ClerkSignOutButton
+            title="Sign Out"
+            className={[
+              "flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-all",
+              "text-rose-400 hover:text-white hover:bg-rose-600/30 border border-transparent hover:border-rose-500/30",
+              collapsed ? "justify-center px-0" : "",
+            ].join(" ")}
+          >
+            <LogOut className="h-[18px] w-[18px] shrink-0" />
+            {!collapsed && <span className="flex-1 truncate text-left">Sign Out</span>}
+          </ClerkSignOutButton>
         </div>
 
         {/* Collapse Toggle */}

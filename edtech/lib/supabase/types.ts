@@ -62,6 +62,7 @@ export interface Database {
         };
         Insert: Omit<Database["public"]["Tables"]["profiles"]["Row"], "created_at">;
         Update: Partial<Database["public"]["Tables"]["profiles"]["Insert"]>;
+        Relationships: [];
       };
       subscription_payments: {
         Row: {
@@ -83,6 +84,7 @@ export interface Database {
         };
         Insert: Omit<Database["public"]["Tables"]["subscription_payments"]["Row"], "id" | "created_at" | "updated_at" | "completed_at">;
         Update: Partial<Database["public"]["Tables"]["subscription_payments"]["Insert"]>;
+        Relationships: [];
       };
       books: {
         Row: {

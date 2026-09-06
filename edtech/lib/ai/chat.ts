@@ -8,6 +8,7 @@
 "use server";
 
 import { GoogleGenAI } from "@google/genai";
+import { auth } from "@clerk/nextjs/server";
 import { createClient } from "@/lib/supabase/server";
 import type { MessageSender } from "@/lib/supabase/types";
 
@@ -124,15 +125,13 @@ export async function sendStudyMessage(
     // The local Database scaffold is intentionally not generated from a live project yet.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const supabase = (await createClient()) as any;
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const { userId } = await auth();
 
-    if (user) {
+    if (userId) {
       if (!activeChatId) {
         const { data: newChat } = await supabase
           .from("ai_chats")
-          .insert({ student_id: user.id, title: message.slice(0, 60) || "New Chat" })
+          .insert({ student_id: userId, title: message.slice(0, 60) || "New Chat" })
           .select("id")
           .single();
         activeChatId = newChat?.id || "";

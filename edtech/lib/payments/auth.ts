@@ -1,7 +1,6 @@
 import "server-only";
 
 import { auth, clerkClient } from "@clerk/nextjs/server";
-import { createClient } from "@/lib/supabase/server";
 
 export interface AuthenticatedAccount {
   userId: string;
@@ -14,16 +13,9 @@ export async function getAuthenticatedAccount(): Promise<AuthenticatedAccount | 
     const clerkSession = await auth();
     if (clerkSession.userId) return { userId: clerkSession.userId, clerkUserId: clerkSession.userId };
   } catch {
-    // Clerk is optional until the application keys and provider are configured.
-  }
-
-  try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    return user ? { userId: user.id, email: user.email } : null;
-  } catch {
     return null;
   }
+  return null;
 }
 
 export async function updateClerkSubscription(userId: string, tier: "plus" | "pro") {

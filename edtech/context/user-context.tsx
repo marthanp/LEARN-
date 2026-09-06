@@ -1,9 +1,9 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { useUser as useClerkUser } from "@clerk/nextjs";
 import { USD_TO_UGX } from "@/lib/currency";
-import { createClient } from "@/lib/supabase/client";
-import { getCurrentUserAction } from "@/app/actions/auth";
+import { switchUserRole } from "@/app/actions/auth";
 
 export type UserRole = "student" | "learner" | "tutor" | "admin";
 export type SubscriptionTier = "free" | "plus" | "pro";
@@ -43,6 +43,7 @@ export interface UserProfile {
 
 interface UserContextType {
   user: UserProfile;
+  isLoading: boolean;
   rentals: BookRental[];
   bookings: TutorBooking[];
   setRole: (role: UserRole) => void;
@@ -56,37 +57,37 @@ interface UserContextType {
   resetAiMessages: () => void;
 }
 
-const DEFAULT_USER: UserProfile = {
-  id: "usr_mock_101",
-  fullName: "Alex Ssemakula",
-  email: "alex@learnplus.edu",
+const GUEST_USER: UserProfile = {
+  id: "",
+  fullName: "Guest",
+  email: "",
   role: "learner",
   subscriptionTier: "free",
-  avatarUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+  avatarUrl: "",
 };
 
 const DEFAULT_RENTALS: BookRental[] = [
   {
     id: "rent_1",
-    bookTitle: "Calculus: Early Transcendentals (8th Ed)",
-    author: "James Stewart",
+    bookTitle: "Certificate Mathematics for O-Level (Book 3 & 4)",
+    author: "Macrae, Kalejaiye & Channon",
     coverUrl: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=300&auto=format&fit=crop&q=80",
     startDate: "2026-08-28",
     dueDate: "2026-10-15",
     status: "active",
     isDigital: false,
-    rentalPrice: 68450,
+    rentalPrice: 45000,
   },
   {
     id: "rent_2",
-    bookTitle: "Principles of Neural Science (6th Ed)",
-    author: "Eric R. Kandel",
+    bookTitle: "Ordinary Level Physics (Abbott)",
+    author: "A.F. Abbott",
     coverUrl: "https://images.unsplash.com/photo-1532012164546-f432f2e3777f?w=300&auto=format&fit=crop&q=80",
     startDate: "2026-09-01",
     dueDate: "2026-12-20",
     status: "active",
     isDigital: true,
-    rentalPrice: 88800,
+    rentalPrice: 38000,
   },
 ];
 
@@ -107,28 +108,57 @@ const DEFAULT_BOOKINGS: TutorBooking[] = [
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export function UserProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<UserProfile>(DEFAULT_USER);
+  // Use Clerk's client hook for instant, real user data
+  const { user: clerkUser, isLoaded: clerkLoaded } = useClerkUser();
+
+  const [user, setUser] = useState<UserProfile>(GUEST_USER);
+  const [isLoading, setIsLoading] = useState(true);
   const [rentals, setRentals] = useState<BookRental[]>(DEFAULT_RENTALS);
   const [bookings, setBookings] = useState<TutorBooking[]>(DEFAULT_BOOKINGS);
   const [aiMessagesCount, setAiMessagesCount] = useState<number>(0);
 
-  // Load identity and subscription from verified server session (Clerk or Supabase).
+  // Sync real Clerk user data into context the moment Clerk loads
   useEffect(() => {
-    void getCurrentUserAction()
-      .then((identity) => {
-        if (!identity) return;
-        setUser((previous) => ({
-          ...previous,
-          id: identity.id,
-          fullName: identity.fullName || previous.fullName,
-          email: identity.email || previous.email,
-          role: (identity.role === "student" ? "learner" : identity.role) as UserRole,
-          subscriptionTier: identity.subscriptionTier as SubscriptionTier,
-          avatarUrl: identity.avatarUrl || previous.avatarUrl,
-        }));
-      })
-      .catch(() => {});
+    if (!clerkLoaded) return;
 
+    if (clerkUser) {
+      // Get role and subscription from Clerk public and unsafe metadata
+      const meta = (clerkUser.publicMetadata || {}) as Record<string, unknown>;
+      const unsafeMeta = (clerkUser.unsafeMetadata || {}) as Record<string, unknown>;
+      const rawRole = String(meta.role || unsafeMeta.role || "learner").toLowerCase();
+      const role: UserRole =
+        rawRole === "admin" ? "admin" : rawRole === "tutor" ? "tutor" : "learner";
+      const tier: SubscriptionTier =
+        meta.subscriptionTier === "plus"
+          ? "plus"
+          : meta.subscriptionTier === "pro"
+          ? "pro"
+          : "free";
+
+      const fullName =
+        [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(" ").trim() ||
+        clerkUser.username ||
+        clerkUser.emailAddresses?.[0]?.emailAddress?.split("@")[0] ||
+        (role === "tutor" ? "Tutor" : "Learner");
+
+      setUser({
+        id: clerkUser.id,
+        fullName,
+        email: clerkUser.emailAddresses?.[0]?.emailAddress || "",
+        role,
+        subscriptionTier: tier,
+        avatarUrl: clerkUser.imageUrl || "",
+      });
+    } else {
+      // Not signed in — reset to guest
+      setUser(GUEST_USER);
+    }
+
+    setIsLoading(false);
+  }, [clerkLoaded, clerkUser]);
+
+  // Load locally-saved rentals/bookings from localStorage (currency migration)
+  useEffect(() => {
     try {
       const currencyVersion = localStorage.getItem("eduhub_currency_version");
       const convertLegacyAmount = (amount: number) =>
@@ -159,12 +189,15 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
       localStorage.setItem("eduhub_currency_version", "ugx");
     } catch {
-      // ignore SSR parsing
+      // ignore SSR / localStorage errors
     }
   }, []);
 
   const setRole = (role: UserRole) => {
-    void role;
+    setUser((prev) => ({ ...prev, role }));
+    switchUserRole(role).catch((err) => {
+      console.error("Failed to switch user role on server:", err);
+    });
   };
 
   const setSubscriptionTier = (tier: SubscriptionTier) => {
@@ -221,6 +254,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     <UserContext.Provider
       value={{
         user,
+        isLoading,
         rentals,
         bookings,
         setRole,

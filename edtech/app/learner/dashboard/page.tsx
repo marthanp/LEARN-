@@ -43,9 +43,9 @@ interface BookRental {
 const ACTIVE_RENTALS: BookRental[] = [
   {
     id: "rent_1",
-    title: "Understanding Pure Mathematics",
-    subject: "A-Level Mathematics",
-    author: "A.J. Sadler & D.W.S. Thorning",
+    title: "Certificate Mathematics for O-Level (Book 3 & 4)",
+    subject: "O-Level Mathematics",
+    author: "Macrae, Kalejaiye & Channon",
     format: "Hardcover",
     dueDate: "Sep 18, 2026",
     daysRemaining: 13,
@@ -54,9 +54,9 @@ const ACTIVE_RENTALS: BookRental[] = [
   },
   {
     id: "rent_2",
-    title: "Principles of Physics (10th Ed)",
-    subject: "A-Level Physics",
-    author: "Halliday & Resnick",
+    title: "Ordinary Level Physics (Abbott)",
+    subject: "O-Level Physics",
+    author: "A.F. Abbott",
     format: "Digital E-Book",
     dueDate: "Sep 09, 2026",
     daysRemaining: 4,
@@ -65,9 +65,9 @@ const ACTIVE_RENTALS: BookRental[] = [
   },
   {
     id: "rent_3",
-    title: "Organic Chemistry for Advanced Level",
-    subject: "Chemistry",
-    author: "Morrison & Boyd",
+    title: "Secondary Chemistry for Uganda (UCE O-Level)",
+    subject: "O-Level Chemistry",
+    author: "Holderness & Lambert",
     format: "Hardcover",
     dueDate: "Sep 25, 2026",
     daysRemaining: 20,
@@ -79,7 +79,7 @@ const ACTIVE_RENTALS: BookRental[] = [
 interface UNEBPaper {
   id: string;
   title: string;
-  level: "UCE (O-Level)" | "UACE (A-Level)";
+  level: "UCE (O-Level)";
   subject: string;
   year: string;
   paperNumber: string;
@@ -90,8 +90,8 @@ interface UNEBPaper {
 const UNEB_PAPERS: UNEBPaper[] = [
   {
     id: "uneb_1",
-    title: "Pure Mathematics Paper 1 (P425/1)",
-    level: "UACE (A-Level)",
+    title: "Mathematics Paper 1 (456/1)",
+    level: "UCE (O-Level)",
     subject: "Mathematics",
     year: "2024",
     paperNumber: "Paper 1",
@@ -100,8 +100,8 @@ const UNEB_PAPERS: UNEBPaper[] = [
   },
   {
     id: "uneb_2",
-    title: "Physics Mechanics & Heat (P510/1)",
-    level: "UACE (A-Level)",
+    title: "Physics Theory & Practical (535/1)",
+    level: "UCE (O-Level)",
     subject: "Physics",
     year: "2024",
     paperNumber: "Paper 1",
@@ -110,8 +110,8 @@ const UNEB_PAPERS: UNEBPaper[] = [
   },
   {
     id: "uneb_3",
-    title: "Biology Theory & Diversity (P530/1)",
-    level: "UACE (A-Level)",
+    title: "Biology Theory & Diversity (553/1)",
+    level: "UCE (O-Level)",
     subject: "Biology",
     year: "2023",
     paperNumber: "Paper 1",
@@ -120,7 +120,7 @@ const UNEB_PAPERS: UNEBPaper[] = [
   },
   {
     id: "uneb_4",
-    title: "General Science & Chemistry (UCE)",
+    title: "Chemistry Paper 2 (545/2)",
     level: "UCE (O-Level)",
     subject: "Chemistry",
     year: "2024",
@@ -196,16 +196,6 @@ export default function LearnerDashboardPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-3 bg-white/10 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-white/10">
-              <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-300 flex items-center justify-center">
-                <Flame className="w-5 h-5" />
-              </div>
-              <div>
-                <div className="text-xs text-slate-300 font-medium">Study Streak</div>
-                <div className="text-lg font-bold text-white leading-none">7 Days 🔥</div>
-              </div>
-            </div>
-
             <button
               type="button"
               onClick={handleLogout}
@@ -375,7 +365,7 @@ export default function LearnerDashboardPage() {
               <h2 className="text-lg font-bold text-slate-900">Recommended UNEB Past Papers &amp; Solutions</h2>
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
-              Official Uganda National Examinations Board (UCE &amp; UACE) questions with step-by-step marking schemes
+              Official Uganda National Examinations Board (UCE O-Level) questions with step-by-step marking schemes
             </p>
           </div>
           <Link
@@ -419,20 +409,13 @@ export default function LearnerDashboardPage() {
                 </div>
               </div>
 
-              <div className="flex flex-col gap-1.5 shrink-0">
+              <div className="shrink-0 self-center">
                 <Link
                   href="/learner/past-papers"
-                  className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold flex items-center gap-1 transition-colors text-center"
+                  className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold flex items-center gap-1.5 transition-all shadow-xs"
                 >
                   <FileText className="w-3.5 h-3.5" />
                   <span>Open in LEARN+</span>
-                </Link>
-                <Link
-                  href="/chat"
-                  className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-semibold flex items-center gap-1 transition-colors text-center"
-                >
-                  <Bot className="w-3.5 h-3.5 text-indigo-600" />
-                  <span>Solve with AI</span>
                 </Link>
               </div>
             </div>

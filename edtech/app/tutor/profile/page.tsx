@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   UserCog,
   Save,
@@ -45,7 +45,15 @@ const CAMPUS_LOCATIONS = [
 
 export default function TutorProfileSettingsPage() {
   const { user } = useUser();
-  const [fullName, setFullName] = useState(user.fullName || "Brian Ssemakula");
+  const [fullName, setFullName] = useState(
+    user.fullName && user.fullName !== "Guest" ? user.fullName : "Verified Tutor"
+  );
+
+  useEffect(() => {
+    if (user.fullName && user.fullName !== "Guest") {
+      setFullName(user.fullName);
+    }
+  }, [user.fullName]);
   const [headline, setHeadline] = useState("Senior A-Level Pure Mathematics & Physics Specialist");
   const [campusLocation, setCampusLocation] = useState(CAMPUS_LOCATIONS[0]);
   const [campusVenue, setCampusVenue] = useState("Main Library, Level 3 Group Room A / Carrel 14");

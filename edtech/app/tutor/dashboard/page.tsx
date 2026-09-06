@@ -26,9 +26,9 @@ import {
   Mail,
   UserCheck,
 } from "lucide-react";
-import { signOutAction } from "@/app/actions/auth";
 import { useUser } from "@/context/user-context";
 import { createClient } from "@/lib/supabase/client";
+import ClerkSignOutButton from "@/components/ClerkSignOutButton";
 
 interface StudentBooking {
   id: string;
@@ -121,7 +121,7 @@ const SEED_NEXT_SESSION: StudentBooking = {
 };
 
 export default function TutorDashboardPage() {
-  const { user } = useUser();
+  const { user, isLoading } = useUser();
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<TutorProfileData>({
     hourlyRateUgx: 35000,
@@ -137,18 +137,14 @@ export default function TutorDashboardPage() {
   const [upcomingCount, setUpcomingCount] = useState(4);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
 
-  // Fetch Supabase data strictly for authenticated tutor (tutor_id = auth.uid())
+  // Fetch database data strictly for the authenticated Clerk tutor.
   useEffect(() => {
     let isMounted = true;
 
     async function loadTutorData() {
       try {
         const supabase = createClient();
-        const {
-          data: { user: authUser },
-        } = await supabase.auth.getUser();
-
-        const tutorId = authUser?.id || user.id;
+        const tutorId = user.id;
 
         if (tutorId) {
           // Query tutor_profiles strictly for current authenticated tutor
@@ -344,7 +340,11 @@ export default function TutorDashboardPage() {
 
             <div className="flex flex-wrap items-center gap-3">
               <h1 className="text-2xl sm:text-4xl font-black tracking-tight text-white">
-                {user.fullName || "Brian Ssemakula"}
+                {isLoading ? (
+                  <span className="inline-block w-48 h-8 bg-white/20 rounded-lg animate-pulse" />
+                ) : (
+                  user.fullName && user.fullName !== "Guest" ? user.fullName : "Verified Tutor"
+                )}
               </h1>
               {profile.verificationStatus === "verified" && (
                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-xs font-bold">
@@ -353,6 +353,13 @@ export default function TutorDashboardPage() {
                 </span>
               )}
             </div>
+
+            {user.email && (
+              <div className="flex items-center gap-2 text-xs text-purple-300/90 font-medium">
+                <Mail className="w-3.5 h-3.5 text-purple-400" />
+                <span>{user.email}</span>
+              </div>
+            )}
 
             <p className="text-slate-300 text-sm sm:text-base max-w-2xl leading-relaxed">
               Specialist tutor at{" "}
@@ -382,15 +389,10 @@ export default function TutorDashboardPage() {
               <span>Manage Availability</span>
             </Link>
 
-            <form action={signOutAction}>
-              <button
-                type="submit"
-                className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white/10 hover:bg-rose-600/30 border border-white/15 hover:border-rose-500/40 text-xs font-semibold text-white transition-all cursor-pointer"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-                <span>Sign Out</span>
-              </button>
-            </form>
+            <ClerkSignOutButton className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white/10 hover:bg-rose-600/30 border border-white/15 hover:border-rose-500/40 text-xs font-semibold text-white transition-all cursor-pointer">
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Sign Out</span>
+            </ClerkSignOutButton>
           </div>
         </div>
       </div>

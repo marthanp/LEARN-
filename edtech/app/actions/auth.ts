@@ -57,35 +57,25 @@ function normalizeSubscriptionStatus(
  */
 function getRoleFromMetadata(
   publicMetadata: Record<string, unknown> | undefined,
-  unsafeMetadata: Record<string, unknown> | undefined
+  unsafeMetadata?: Record<string, unknown> | undefined
 ): UserRole {
-  return normalizeRole(
-    publicMetadata?.role ??
-      unsafeMetadata?.role ??
-      publicMetadata?.userRole ??
-      unsafeMetadata?.userRole
-  );
+  return normalizeRole(publicMetadata?.role || unsafeMetadata?.role);
 }
 
 /**
  * Get the subscription information stored in Clerk metadata.
  */
 function getSubscriptionFromMetadata(
-  publicMetadata: Record<string, unknown> | undefined,
-  unsafeMetadata: Record<string, unknown> | undefined
+  publicMetadata: Record<string, unknown> | undefined
 ) {
   return {
     tier: normalizeSubscriptionTier(
       publicMetadata?.subscriptionTier ??
-        unsafeMetadata?.subscriptionTier ??
-        publicMetadata?.plan ??
-        unsafeMetadata?.plan
+        publicMetadata?.plan
     ),
     status: normalizeSubscriptionStatus(
       publicMetadata?.subscriptionStatus ??
-        unsafeMetadata?.subscriptionStatus ??
-        publicMetadata?.planStatus ??
-        unsafeMetadata?.planStatus
+        publicMetadata?.planStatus
     ),
   };
 }
@@ -120,16 +110,12 @@ export async function getCurrentUserAction(): Promise<CurrentUserData | null> {
 
   const publicMetadata =
     (user.publicMetadata as Record<string, unknown> | undefined) ?? undefined;
-
   const unsafeMetadata =
     (user.unsafeMetadata as Record<string, unknown> | undefined) ?? undefined;
 
   const role = getRoleFromMetadata(publicMetadata, unsafeMetadata);
 
-  const subscription = getSubscriptionFromMetadata(
-    publicMetadata,
-    unsafeMetadata
-  );
+  const subscription = getSubscriptionFromMetadata(publicMetadata);
 
   const firstName = user.firstName?.trim() ?? "";
   const lastName = user.lastName?.trim() ?? "";
@@ -137,7 +123,7 @@ export async function getCurrentUserAction(): Promise<CurrentUserData | null> {
   const fullName =
     `${firstName} ${lastName}`.trim() ||
     user.username?.trim() ||
-    "Learner";
+    (role === "tutor" ? "Tutor" : "Learner");
 
   const email = user.primaryEmailAddress?.emailAddress ?? "";
 
@@ -164,11 +150,44 @@ export async function getCurrentUserRole(): Promise<UserRole | null> {
 
   const publicMetadata =
     (user.publicMetadata as Record<string, unknown> | undefined) ?? undefined;
-
   const unsafeMetadata =
     (user.unsafeMetadata as Record<string, unknown> | undefined) ?? undefined;
 
   return getRoleFromMetadata(publicMetadata, unsafeMetadata);
+}
+
+export async function ensurePublicRole(intendedRole?: string | null): Promise<UserRole | null> {
+  const user = await getCurrentClerkUser();
+  if (!user) return null;
+
+  const publicMetadata = (user.publicMetadata as Record<string, unknown> | undefined) ?? {};
+  const unsafeMetadata = (user.unsafeMetadata as Record<string, unknown> | undefined) ?? {};
+
+  const roleFromUnsafe = unsafeMetadata.role as string | undefined;
+  const roleFromPublic = publicMetadata.role as string | undefined;
+
+  let finalRole: UserRole = "learner";
+  if (intendedRole === "tutor" || intendedRole === "admin" || intendedRole === "learner") {
+    finalRole = intendedRole;
+  } else if (roleFromUnsafe === "tutor" || roleFromUnsafe === "admin") {
+    finalRole = roleFromUnsafe as UserRole;
+  } else if (roleFromPublic === "tutor" || roleFromPublic === "admin") {
+    finalRole = roleFromPublic as UserRole;
+  }
+
+  if (publicMetadata.role !== finalRole || unsafeMetadata.role !== finalRole) {
+    try {
+      const client = await clerkClient();
+      await client.users.updateUserMetadata(user.id, {
+        publicMetadata: { ...publicMetadata, role: finalRole },
+        unsafeMetadata: { ...unsafeMetadata, role: finalRole },
+      });
+    } catch (e) {
+      console.warn("Could not update Clerk user metadata:", e);
+    }
+  }
+
+  return finalRole;
 }
 
 /**
@@ -201,10 +220,7 @@ export async function requireRole(requiredRole: Exclude<UserRole, "admin">) {
   const publicMetadata =
     (user.publicMetadata as Record<string, unknown> | undefined) ?? undefined;
 
-  const unsafeMetadata =
-    (user.unsafeMetadata as Record<string, unknown> | undefined) ?? undefined;
-
-  const role = getRoleFromMetadata(publicMetadata, unsafeMetadata);
+  const role = getRoleFromMetadata(publicMetadata);
 
   if (role !== requiredRole && role !== "admin") {
     throw new Error("You are not authorized to access this resource.");
@@ -229,10 +245,7 @@ export async function requireAdmin() {
   const publicMetadata =
     (user.publicMetadata as Record<string, unknown> | undefined) ?? undefined;
 
-  const unsafeMetadata =
-    (user.unsafeMetadata as Record<string, unknown> | undefined) ?? undefined;
-
-  const role = getRoleFromMetadata(publicMetadata, unsafeMetadata);
+  const role = getRoleFromMetadata(publicMetadata);
 
   if (role !== "admin") {
     throw new Error("Administrator access required.");
@@ -305,5 +318,31 @@ export async function signOutAction() {
   }
 
   redirect("/login");
+}
+
+/**
+  * Switch the user role (e.g. learner <-> tutor) and redirect to the appropriate portal.
+  */
+export async function switchUserRole(role: UserRole) {
+  const { userId } = await auth();
+  if (!userId) {
+    redirect("/login");
+  }
+
+  const client = await clerkClient();
+  const user = await client.users.getUser(userId);
+  const publicMetadata = (user.publicMetadata || {}) as Record<string, unknown>;
+  const unsafeMetadata = (user.unsafeMetadata || {}) as Record<string, unknown>;
+
+  try {
+    await client.users.updateUserMetadata(userId, {
+      publicMetadata: { ...publicMetadata, role },
+      unsafeMetadata: { ...unsafeMetadata, role },
+    });
+  } catch (err) {
+    console.error("Failed to update user role:", err);
+  }
+
+  redirect(`/${role}/dashboard`);
 }
 

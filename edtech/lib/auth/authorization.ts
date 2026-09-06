@@ -1,8 +1,7 @@
 import "server-only";
 
-import { auth } from "@clerk/nextjs/server";
+import { auth, currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
 
 export type AppRole = "learner" | "tutor" | "admin";
 export type AccountStatus = "active" | "pending" | "suspended" | "rejected";
@@ -31,38 +30,34 @@ function normalizeStatus(value: unknown): ServerIdentity["subscriptionStatus"] {
 export async function getServerIdentity(): Promise<ServerIdentity | null> {
   try {
     const clerk = await auth();
-    if (clerk.userId) {
-      const claims = (clerk.sessionClaims || {}) as Record<string, unknown>;
-      const metadata = claims.metadata as Record<string, unknown> | undefined;
-      const publicMetadata = claims.publicMetadata as Record<string, unknown> | undefined;
-      return {
-        id: clerk.userId,
-        role: normalizeRole(publicMetadata?.role ?? metadata?.role),
-        subscriptionTier: normalizeTier(publicMetadata?.subscriptionTier ?? metadata?.subscriptionTier),
-        subscriptionStatus: normalizeStatus(publicMetadata?.subscriptionStatus ?? metadata?.subscriptionStatus),
-        accountStatus: (publicMetadata?.accountStatus ?? metadata?.accountStatus) === "suspended" ? "suspended" : "active",
-      };
-    }
-  } catch {
-    // Clerk is not configured yet; use the existing verified Supabase session.
-  }
+    if (!clerk.userId) return null;
 
-  try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return null;
-      const { data: profile } = await supabase
-      .from("profiles")
-        .select("role, subscription_tier, subscription_status, subscription_expires_at, account_status")
-      .eq("id", user.id)
-      .single();
-    if (!profile) return null;
+    const claims = (clerk.sessionClaims || {}) as Record<string, unknown>;
+    const sessionMetadata = (claims.metadata || claims.publicMetadata || claims.public_metadata) as Record<string, unknown> | undefined;
+
+    let roleRaw = sessionMetadata?.role;
+    let tierRaw = sessionMetadata?.subscriptionTier || sessionMetadata?.tier;
+    let statusRaw = sessionMetadata?.subscriptionStatus;
+    let accountStatusRaw = sessionMetadata?.accountStatus;
+
+    if (!roleRaw) {
+      const user = await currentUser();
+      if (user) {
+        const pubMeta = (user.publicMetadata || {}) as Record<string, unknown>;
+        const unsafeMeta = (user.unsafeMetadata || {}) as Record<string, unknown>;
+        roleRaw = pubMeta.role || unsafeMeta.role;
+        tierRaw = tierRaw || pubMeta.subscriptionTier || unsafeMeta.subscriptionTier;
+        statusRaw = statusRaw || pubMeta.subscriptionStatus || unsafeMeta.subscriptionStatus;
+        accountStatusRaw = accountStatusRaw || pubMeta.accountStatus;
+      }
+    }
+
     return {
-      id: user.id,
-      role: normalizeRole(profile.role),
-      subscriptionTier: normalizeTier(profile.subscription_tier),
-      subscriptionStatus: profile.subscription_status === "active" && (!profile.subscription_expires_at || new Date(profile.subscription_expires_at) > new Date()) ? "active" : "expired",
-      accountStatus: profile.account_status === "suspended" ? "suspended" : "active",
+      id: clerk.userId,
+      role: normalizeRole(roleRaw),
+      subscriptionTier: normalizeTier(tierRaw),
+      subscriptionStatus: normalizeStatus(statusRaw),
+      accountStatus: accountStatusRaw === "suspended" ? "suspended" : "active",
     };
   } catch {
     return null;

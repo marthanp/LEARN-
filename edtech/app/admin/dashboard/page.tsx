@@ -30,7 +30,7 @@ import {
   X,
   ChevronRight,
 } from "lucide-react";
-import { signOutAction } from "@/app/actions/auth";
+import ClerkSignOutButton from "@/components/ClerkSignOutButton";
 
 interface PendingTutor {
   id: string;
@@ -129,15 +129,10 @@ export default function AdminDashboardPage() {
               </div>
             </div>
 
-            <form action={signOutAction}>
-              <button
-                type="submit"
-                className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white/10 hover:bg-rose-600/30 border border-white/15 hover:border-rose-500/40 text-xs font-semibold text-white transition-all cursor-pointer"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-                <span>Sign Out</span>
-              </button>
-            </form>
+            <ClerkSignOutButton className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white/10 hover:bg-rose-600/30 border border-white/15 hover:border-rose-500/40 text-xs font-semibold text-white transition-all cursor-pointer">
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Sign Out</span>
+            </ClerkSignOutButton>
           </div>
         </div>
       </div>
