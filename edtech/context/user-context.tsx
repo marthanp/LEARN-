@@ -2,6 +2,8 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { USD_TO_UGX } from "@/lib/currency";
+import { createClient } from "@/lib/supabase/client";
+import { getCurrentUserAction } from "@/app/actions/auth";
 
 export type UserRole = "student" | "learner" | "tutor" | "admin";
 export type SubscriptionTier = "free" | "plus" | "pro";
@@ -59,7 +61,7 @@ const DEFAULT_USER: UserProfile = {
   fullName: "Alex Ssemakula",
   email: "alex@learnplus.edu",
   role: "learner",
-  subscriptionTier: "plus",
+  subscriptionTier: "free",
   avatarUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
 };
 
@@ -108,40 +110,29 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserProfile>(DEFAULT_USER);
   const [rentals, setRentals] = useState<BookRental[]>(DEFAULT_RENTALS);
   const [bookings, setBookings] = useState<TutorBooking[]>(DEFAULT_BOOKINGS);
-  const [aiMessagesCount, setAiMessagesCount] = useState<number>(3);
+  const [aiMessagesCount, setAiMessagesCount] = useState<number>(0);
 
-  // Hydrate from cookies and localStorage if present
+  // Load identity and subscription from verified server session (Clerk or Supabase).
   useEffect(() => {
+    void getCurrentUserAction()
+      .then((identity) => {
+        if (!identity) return;
+        setUser((previous) => ({
+          ...previous,
+          id: identity.id,
+          fullName: identity.fullName || previous.fullName,
+          email: identity.email || previous.email,
+          role: (identity.role === "student" ? "learner" : identity.role) as UserRole,
+          subscriptionTier: identity.subscriptionTier as SubscriptionTier,
+          avatarUrl: identity.avatarUrl || previous.avatarUrl,
+        }));
+      })
+      .catch(() => {});
+
     try {
-      let activeRole: UserRole | undefined;
-      let activeName: string | undefined;
-
-      // Check cookies set during signup / login
-      const cookies = document.cookie.split("; ");
-      const roleCookie = cookies.find((c) => c.startsWith("learn_user_role="))?.split("=")[1];
-      const nameCookie = cookies.find((c) => c.startsWith("learn_user_name="))?.split("=")[1];
-
-      if (roleCookie) {
-        activeRole = roleCookie as UserRole;
-      }
-      if (nameCookie) {
-        activeName = decodeURIComponent(nameCookie);
-      }
-
       const currencyVersion = localStorage.getItem("eduhub_currency_version");
       const convertLegacyAmount = (amount: number) =>
         currencyVersion === "ugx" || amount >= 1000 ? amount : Math.round(amount * USD_TO_UGX);
-
-      const savedUserStr = localStorage.getItem("eduhub_user");
-      let savedUser: Partial<UserProfile> = {};
-      if (savedUserStr) savedUser = JSON.parse(savedUserStr);
-
-      setUser((prev) => ({
-        ...prev,
-        ...savedUser,
-        role: (activeRole || savedUser.role || prev.role) as UserRole,
-        fullName: activeName || savedUser.fullName || prev.fullName,
-      }));
 
       const savedRentals = localStorage.getItem("eduhub_rentals");
       if (savedRentals) {
@@ -173,21 +164,11 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const setRole = (role: UserRole) => {
-    // Set cookie so middleware and route guards align
-    document.cookie = `learn_user_role=${role}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
-    setUser((prev) => {
-      const next = { ...prev, role };
-      localStorage.setItem("eduhub_user", JSON.stringify(next));
-      return next;
-    });
+    void role;
   };
 
   const setSubscriptionTier = (tier: SubscriptionTier) => {
-    setUser((prev) => {
-      const next = { ...prev, subscriptionTier: tier };
-      localStorage.setItem("eduhub_user", JSON.stringify(next));
-      return next;
-    });
+    setUser((prev) => ({ ...prev, subscriptionTier: tier }));
   };
 
   const rentBook = (rental: Omit<BookRental, "id" | "status" | "startDate">) => {

@@ -42,6 +42,7 @@ export interface ExamSummary {
 }
 export type LibraryResourceType = "textbook" | "syllabus" | "teacher_guide" | "revision" | "notes" | "other";
 export type LibraryContentStatus = "available" | "metadata_only" | "restricted";
+export type PaymentStatus = "pending" | "processing" | "completed" | "failed" | "expired" | "cancelled";
 
 export interface Database {
   public: {
@@ -53,11 +54,35 @@ export interface Database {
           email: string;
           role: UserRole;
           subscription_tier: SubscriptionTier;
+          subscription_status: "active" | "expired" | "cancelled";
+          subscription_expires_at: string | null;
+          account_status: "active" | "pending" | "suspended" | "rejected";
           avatar_url: string | null;
           created_at: string;
         };
         Insert: Omit<Database["public"]["Tables"]["profiles"]["Row"], "created_at">;
         Update: Partial<Database["public"]["Tables"]["profiles"]["Insert"]>;
+      };
+      subscription_payments: {
+        Row: {
+          id: string;
+          user_id: string;
+          provider: string;
+          reference: string;
+          provider_transaction_id: string | null;
+          plan: SubscriptionTier;
+          amount_ugx: number;
+          phone_number: string;
+          payment_method: "mtn" | "airtel";
+          status: PaymentStatus;
+          failure_reason: string | null;
+          provider_payload: Json | null;
+          created_at: string;
+          updated_at: string;
+          completed_at: string | null;
+        };
+        Insert: Omit<Database["public"]["Tables"]["subscription_payments"]["Row"], "id" | "created_at" | "updated_at" | "completed_at">;
+        Update: Partial<Database["public"]["Tables"]["subscription_payments"]["Insert"]>;
       };
       books: {
         Row: {

@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import AppShell from "@/components/AppShell";
 import { UserProvider } from "@/context/user-context";
+import { ClerkProvider } from "@clerk/nextjs";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -21,12 +22,17 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const clerkKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+  const content = (
+    <UserProvider>
+      <AppShell>{children}</AppShell>
+    </UserProvider>
+  );
+
   return (
     <html lang="en" suppressHydrationWarning data-scroll-behavior="smooth" className={inter.variable}>
       <body className="bg-[#f8fafc] text-slate-900 antialiased selection:bg-indigo-600 selection:text-white">
-        <UserProvider>
-          <AppShell>{children}</AppShell>
-        </UserProvider>
+        {clerkKey ? <ClerkProvider publishableKey={clerkKey}>{content}</ClerkProvider> : content}
       </body>
     </html>
   );

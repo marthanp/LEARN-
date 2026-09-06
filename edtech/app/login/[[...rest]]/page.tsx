@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import Link from "next/link";
 import { loginAction, type AuthState } from "@/app/actions/auth";
+import { SignIn } from "@clerk/nextjs";
 import {
   Sparkles,
   Mail,
@@ -17,6 +18,19 @@ import {
 } from "lucide-react";
 
 export default function LoginPage() {
+  if (process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-950 p-4">
+        <SignIn
+          routing="path"
+          path="/login"
+          signUpUrl="/signup"
+          fallbackRedirectUrl="/dashboard"
+        />
+      </div>
+    );
+  }
+
   const [state, formAction, isPending] = useActionState<AuthState, FormData>(
     loginAction,
     { error: null }
@@ -77,45 +91,7 @@ export default function LoginPage() {
             </div>
           )}
 
-          <form
-            action={formAction}
-            onSubmit={(e) => {
-              const form = e.currentTarget;
-              const email = (form.elements.namedItem("email") as HTMLInputElement)?.value ?? "";
-              if (email) {
-                try {
-                  const lower = email.toLowerCase();
-                  const role = lower.includes("admin")
-                    ? "admin"
-                    : lower.includes("tutor")
-                    ? "tutor"
-                    : "learner";
-                  const avatars: Record<string, string> = {
-                    learner: "https://images.unsplash.com/photo-1640951613773-54706e06851d?w=150&auto=format&fit=crop&q=80",
-                    tutor:   "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80",
-                    admin:   "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80",
-                  };
-                  localStorage.setItem(
-                    "eduhub_user",
-                    JSON.stringify({
-                      id: "usr_" + Date.now(),
-                      fullName:
-                        role === "admin" ? "System Administrator"
-                        : role === "tutor" ? "Brian Ssemakula"
-                        : "Alex Ssemakula",
-                      email,
-                      role,
-                      subscriptionTier: "plus",
-                      avatarUrl: avatars[role],
-                    })
-                  );
-                } catch {
-                  // ignore localStorage errors in SSR/incognito
-                }
-              }
-            }}
-            className="space-y-5"
-          >
+          <form action={formAction} className="space-y-5">
             {/* Email Address */}
             <div>
               <label

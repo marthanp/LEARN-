@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import Link from "next/link";
 import { signUpAction, type AuthState } from "@/app/actions/auth";
+import { SignUp } from "@clerk/nextjs";
 import {
   Sparkles,
   Mail,
@@ -19,6 +20,19 @@ import {
 } from "lucide-react";
 
 export default function SignUpPage() {
+  if (process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-950 p-4">
+        <SignUp
+          routing="path"
+          path="/signup"
+          signInUrl="/login"
+          fallbackRedirectUrl="/dashboard"
+        />
+      </div>
+    );
+  }
+
   const [state, formAction, isPending] = useActionState<AuthState, FormData>(
     signUpAction,
     { error: null }
@@ -65,33 +79,7 @@ export default function SignUpPage() {
             </div>
           )}
 
-          <form
-            action={formAction}
-            onSubmit={(e) => {
-              const form = e.currentTarget;
-              const name = (form.elements.namedItem("full_name") as HTMLInputElement)?.value;
-              const email = (form.elements.namedItem("email") as HTMLInputElement)?.value;
-              if (name && email) {
-                try {
-                  localStorage.setItem(
-                    "eduhub_user",
-                    JSON.stringify({
-                      id: "usr_" + Date.now(),
-                      fullName: name,
-                      email: email,
-                      role: selectedRole === "tutor" ? "tutor" : "student",
-                      subscriptionTier: "plus",
-                      avatarUrl:
-                        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
-                    })
-                  );
-                } catch {
-                  // ignore localStorage errors
-                }
-              }
-            }}
-            className="space-y-5"
-          >
+          <form action={formAction} className="space-y-5">
             {/* Full Name */}
             <div>
               <label

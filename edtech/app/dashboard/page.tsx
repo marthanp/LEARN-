@@ -1,5 +1,5 @@
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { requireIdentity } from "@/lib/auth/authorization";
 
 <<<<<<< HEAD
 /**
@@ -8,9 +8,9 @@ import { redirect } from "next/navigation";
  * No client flash or useEffect needed.
  */
 export default async function DashboardRedirectPage() {
-  const cookieStore = await cookies();
-  const role = cookieStore.get("learn_user_role")?.value;
+  const { role } = await requireIdentity();
 
+<<<<<<< HEAD
   if (role === "tutor") {
     redirect("/tutor/dashboard");
   } else if (role === "admin") {
@@ -341,4 +341,7 @@ export default function DashboardPage() {
     </div>
   );
 >>>>>>> 1db5e7a (adding the feedback panel)
+=======
+  redirect(`/${role}/dashboard`);
+>>>>>>> 96ebfd2 (payment)
 }

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { redirect } from "next/navigation";
 import AdminSidebar from "@/app/admin/components/AdminSidebar";
 import { createClient } from "@/lib/supabase/server";
@@ -28,4 +29,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       </main>
     </div>
   );
+=======
+import { requireRole } from "@/lib/auth/authorization";
+
+export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+  await requireRole(["admin"]);
+  return children;
+>>>>>>> 96ebfd2 (payment)
 }

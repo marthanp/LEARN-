@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
+import { auth, clerkClient } from "@clerk/nextjs/server";
 
 export type AuthState = {
   error?: string | null;
@@ -52,8 +53,8 @@ export async function signUpAction(
   const fullName = (formData.get("full_name") as string)?.trim();
   const email = (formData.get("email") as string)?.trim().toLowerCase();
   const password = formData.get("password") as string;
-  const rawRole = formData.get("role") as string;
-  const role = normalizeRole(rawRole);
+  const requestedRole = String(formData.get("role") || "").toLowerCase();
+  const role: "learner" | "tutor" = requestedRole === "tutor" ? "tutor" : "learner";
 
   if (!fullName || !email || !password) {
     return { error: "Please provide your full name, email, and password." };
@@ -62,24 +63,6 @@ export async function signUpAction(
   if (password.length < 6) {
     return { error: "Password must be at least 6 characters long." };
   }
-
-  // Persist local role session cookie so middleware & components recognize the authenticated role
-  const cookieStore = await cookies();
-  cookieStore.set("learn_user_role", role, {
-    path: "/",
-    maxAge: 60 * 60 * 24 * 7,
-    sameSite: "lax",
-  });
-  cookieStore.set("learn_user_name", fullName, {
-    path: "/",
-    maxAge: 60 * 60 * 24 * 7,
-    sameSite: "lax",
-  });
-  cookieStore.set("learn_user_email", email, {
-    path: "/",
-    maxAge: 60 * 60 * 24 * 7,
-    sameSite: "lax",
-  });
 
   if (isSupabaseConfigured()) {
     try {
@@ -142,13 +125,6 @@ export async function loginAction(
 
   let userRole: "learner" | "tutor" | "admin" = "learner";
 
-  // Infer demo role fallback from email if Supabase is offline
-  if (email.includes("tutor")) {
-    userRole = "tutor";
-  } else if (email.includes("admin")) {
-    userRole = "admin";
-  }
-
   if (isSupabaseConfigured()) {
     try {
       const supabase = await createClient();
@@ -158,15 +134,7 @@ export async function loginAction(
         password,
       });
 
-      if (error) {
-        const isNetworkErr =
-          error.message?.toLowerCase().includes("fetch failed") ||
-          error.message?.toLowerCase().includes("network");
-
-        if (!isNetworkErr) {
-          return { error: error.message };
-        }
-      }
+      if (error) return { error: error.message };
 
       if (data?.user) {
         // Query public.profiles to retrieve the authenticated user's role
@@ -180,22 +148,12 @@ export async function loginAction(
         userRole = normalizeRole(profileRecord?.role || data.user.user_metadata?.role);
       }
     } catch (err: unknown) {
-      console.warn("Supabase auth signIn offline/failed, falling back to role based on email:", err);
+      console.error("Supabase auth signIn failed:", err);
+      return { error: "Authentication service is unavailable. Please try again." };
     }
+  } else {
+    return { error: "Authentication is not configured." };
   }
-
-  // Persist session cookie
-  const cookieStore = await cookies();
-  cookieStore.set("learn_user_role", userRole, {
-    path: "/",
-    maxAge: 60 * 60 * 24 * 7,
-    sameSite: "lax",
-  });
-  cookieStore.set("learn_user_email", email, {
-    path: "/",
-    maxAge: 60 * 60 * 24 * 7,
-    sameSite: "lax",
-  });
 
   redirect(`/${userRole}/dashboard`);
 }
@@ -218,5 +176,92 @@ export async function signOutAction() {
     }
   }
 
+  try {
+    const session = await auth();
+    if (session.sessionId) await (await clerkClient()).sessions.revokeSession(session.sessionId);
+  } catch {
+    // Clerk is optional when the Supabase fallback is active.
+  }
+
   redirect("/login");
 }
+
+export interface CurrentUserData {
+  id: string;
+  fullName: string;
+  email: string;
+  role: "learner" | "tutor" | "admin";
+  subscriptionTier: "free" | "plus" | "pro";
+  subscriptionStatus: "active" | "expired" | "cancelled";
+  avatarUrl?: string;
+}
+
+export async function getCurrentUserAction(): Promise<CurrentUserData | null> {
+  const { getServerIdentity } = await import("@/lib/auth/authorization");
+  const identity = await getServerIdentity();
+  if (!identity) return null;
+
+  if (process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) {
+    try {
+      const { currentUser } = await import("@clerk/nextjs/server");
+      const clerkUser = await currentUser();
+      const fullName = clerkUser
+        ? `${clerkUser.firstName || ""} ${clerkUser.lastName || ""}`.trim() || clerkUser.username || "Learner"
+        : "Learner";
+      const email = clerkUser?.emailAddresses?.[0]?.emailAddress || "";
+      const avatarUrl = clerkUser?.imageUrl || "";
+
+      return {
+        id: identity.id,
+        fullName,
+        email,
+        role: identity.role,
+        subscriptionTier: identity.subscriptionTier,
+        subscriptionStatus: identity.subscriptionStatus,
+        avatarUrl,
+      };
+    } catch {
+      return {
+        id: identity.id,
+        fullName: "Learner",
+        email: "",
+        role: identity.role,
+        subscriptionTier: identity.subscriptionTier,
+        subscriptionStatus: identity.subscriptionStatus,
+      };
+    }
+  }
+
+  if (isSupabaseConfigured()) {
+    try {
+      const supabase = await createClient();
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name, email, avatar_url")
+        .eq("id", identity.id)
+        .single();
+      const p = profile as { full_name?: string; email?: string; avatar_url?: string } | null;
+      return {
+        id: identity.id,
+        fullName: p?.full_name || "Learner",
+        email: p?.email || "",
+        role: identity.role,
+        subscriptionTier: identity.subscriptionTier,
+        subscriptionStatus: identity.subscriptionStatus,
+        avatarUrl: p?.avatar_url,
+      };
+    } catch {
+      // fallback
+    }
+  }
+
+  return {
+    id: identity.id,
+    fullName: "Learner",
+    email: "",
+    role: identity.role,
+    subscriptionTier: identity.subscriptionTier,
+    subscriptionStatus: identity.subscriptionStatus,
+  };
+}
+

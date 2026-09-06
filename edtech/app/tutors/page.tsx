@@ -12,8 +12,11 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useUser } from "@/context/user-context";
+<<<<<<< HEAD
 import { formatUgx } from "@/lib/currency";
 import FeedbackPanel from "@/components/FeedbackPanel";
+=======
+>>>>>>> 96ebfd2 (payment)
 
 export interface Tutor {
   id: string;
@@ -181,21 +184,16 @@ export default function TutorsPage() {
 
   const availableOnlineCount = TUTORS_CATALOG.filter((t) => t.availability === "online").length;
 
-  const discountRate = user.subscriptionTier === "pro" ? 0.25 : user.subscriptionTier === "plus" ? 0.1 : 0;
-
   const handleConfirmBooking = () => {
     if (!bookingTutor) return;
-
-    const basePrice = bookingTutor.rate;
-    const finalPrice = basePrice * (1 - discountRate);
 
     bookTutor({
       tutorName: bookingTutor.name,
       subject: bookingTutor.subject.replace(" Tutor", ""),
       date: `14 Jun 2025`,
       time: selectedTime,
-      hourlyRate: basePrice,
-      finalPrice: Math.round(finalPrice * 100) / 100,
+      hourlyRate: 0,
+      finalPrice: 0,
       notes: notes.trim() || "Coursework and exam preparation",
     });
 
@@ -398,10 +396,7 @@ export default function TutorsPage() {
 
                 {/* Bottom Rate & Book Action */}
                 <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
-                  <span className="text-sm font-extrabold text-slate-900">
-                    {formatUgx(tutor.rate)}{" "}
-                    <span className="text-xs font-normal text-slate-400">/ hour</span>
-                  </span>
+                  <span className="text-xs font-bold text-emerald-700">Included with your subscription</span>
                   <button
                     onClick={() => setBookingTutor(tutor)}
                     className="px-4 py-2 rounded-xl bg-[#4F46E5] hover:bg-[#4338CA] text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
@@ -470,7 +465,7 @@ export default function TutorsPage() {
                       <span className="flex items-center gap-1">
                         <Clock className="h-3 w-3 text-slate-400" /> {booking.time}
                       </span>
-                      <span className="font-bold text-slate-900">{formatUgx(booking.finalPrice)}</span>
+                      <span className="font-bold text-emerald-700">Included</span>
                     </div>
                   </div>
                 </div>
@@ -536,7 +531,7 @@ export default function TutorsPage() {
                     <h4 className="text-xs font-bold text-slate-900">{bookingTutor.name}</h4>
                     <p className="text-[11px] text-slate-500">{bookingTutor.subject}</p>
                     <div className="flex items-center gap-2 mt-1">
-                      <span className="text-xs font-bold text-[#4F46E5]">{formatUgx(bookingTutor.rate)} / hour</span>
+                      <span className="text-xs font-bold text-emerald-700">Included with LEARN+</span>
                       <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-semibold">
                         {bookingTutor.availabilityText}
                       </span>
@@ -607,24 +602,8 @@ export default function TutorsPage() {
                   />
                 </div>
 
-                {/* Price Summary */}
-                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100 space-y-1 text-xs">
-                  <div className="flex justify-between text-slate-500">
-                    <span>Hourly Rate:</span>
-                    <span className="font-semibold text-slate-800">{formatUgx(bookingTutor.rate)}</span>
-                  </div>
-                  {discountRate > 0 && (
-                    <div className="flex justify-between text-emerald-600 font-semibold">
-                      <span>Your Plan Discount ({(discountRate * 100).toFixed(0)}%):</span>
-                      <span>-{formatUgx(bookingTutor.rate * discountRate)}</span>
-                    </div>
-                  )}
-                  <div className="border-t border-slate-200 pt-1 flex justify-between font-bold text-slate-900 text-sm">
-                    <span>Total:</span>
-                    <span className="text-[#4F46E5]">
-                      {formatUgx(bookingTutor.rate * (1 - discountRate))}
-                    </span>
-                  </div>
+                <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-800">
+                  Tutor access is included with an active LEARN+ subscription. No separate tutor payment is required.
                 </div>
 
                 <button

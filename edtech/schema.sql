@@ -33,6 +33,33 @@ create table if not exists public.profiles (
   created_at        timestamptz not null default now()
 );
 
+alter table public.profiles add column if not exists subscription_tier text not null default 'free';
+alter table public.profiles add column if not exists subscription_status text not null default 'expired';
+alter table public.profiles add column if not exists subscription_expires_at timestamptz;
+alter table public.profiles add column if not exists account_status text not null default 'active';
+
+create table if not exists public.subscription_payments (
+  id uuid primary key default uuid_generate_v4(),
+  user_id text not null,
+  provider text not null default 'pesajet',
+  reference text not null unique,
+  provider_transaction_id text unique,
+  plan text not null check (plan in ('free', 'plus', 'pro')),
+  amount_ugx integer not null check (amount_ugx > 0),
+  phone_number text not null,
+  payment_method text not null check (payment_method in ('mtn', 'airtel')),
+  status text not null default 'pending' check (status in ('pending', 'processing', 'completed', 'failed', 'expired', 'cancelled')),
+  failure_reason text,
+  provider_payload jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  completed_at timestamptz
+);
+
+create index if not exists subscription_payments_user_idx on public.subscription_payments (user_id, created_at desc);
+create index if not exists subscription_payments_status_idx on public.subscription_payments (status);
+alter table public.subscription_payments enable row level security;
+
 -- Auto-create profile on sign-up
 create or replace function public.handle_new_user()
 returns trigger language plpgsql security definer set search_path = public as $$

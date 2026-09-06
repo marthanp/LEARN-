@@ -44,16 +44,16 @@ interface SearchResultItem {
 const SEARCH_DATABASE: SearchResultItem[] = [
   { id: "s1", type: "book", title: "Calculus: Early Transcendentals", subtitle: "MATH 201 • Stewart", href: "/marketplace" },
   { id: "s2", type: "book", title: "Advanced Mathematics", subtitle: "M. Green • Format: Hardcover", href: "/marketplace" },
-  { id: "s3", type: "book", title: "Biology Form 5 & 6", subtitle: "A. Kato • Format: PDF ($9.00)", href: "/marketplace" },
+  { id: "s3", type: "book", title: "Biology Form 5 & 6", subtitle: "Uganda curriculum resource", href: "/marketplace" },
   { id: "s4", type: "book", title: "Physics Principles & Mechanics", subtitle: "PHYS 101 • Digital", href: "/marketplace" },
-  { id: "s5", type: "tutor", title: "Brian Ssemakula", subtitle: "Mathematics Tutor • 4.9 ★ ($15.00/hr)", href: "/tutors" },
-  { id: "s6", type: "tutor", title: "Maria Nanyonjo", subtitle: "Biology Tutor • 4.8 ★ ($12.00/hr)", href: "/tutors" },
+  { id: "s5", type: "tutor", title: "Brian Ssemakula", subtitle: "Mathematics Tutor • 4.9 ★ • Included with LEARN+", href: "/tutors" },
+  { id: "s6", type: "tutor", title: "Maria Nanyonjo", subtitle: "Biology Tutor • 4.8 ★ • Included with LEARN+", href: "/tutors" },
   { id: "s7", type: "ai", title: "Explain Quadratic Formula", subtitle: "x = (-b ± √(b² - 4ac)) / (2a)", href: "/chat" },
   { id: "s8", type: "ai", title: "Quiz me on Photosynthesis", subtitle: "Interactive Plant Biology Quiz", href: "/chat" },
 ];
 
 export default function HeaderBar() {
-  const { user, setRole, setSubscriptionTier } = useUser();
+  const { user } = useUser();
   const router = useRouter();
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -176,12 +176,9 @@ export default function HeaderBar() {
         <div className="relative">
           <button
             id="demo-switcher-btn"
-            onClick={() => {
-              setDropdownOpen(!dropdownOpen);
-              setNotifOpen(false);
-            }}
+            onClick={() => setDropdownOpen(false)}
             className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#EEF2FF] hover:bg-[#E0E7FF] border border-[#C7D2FE] text-xs font-semibold text-[#4F46E5] transition-all cursor-pointer shadow-xs"
-            title="Demo Switcher: Switch Role & Plan"
+            title="Account role and subscription"
           >
             <Sparkles className="h-3.5 w-3.5 text-[#4F46E5]" />
             <span className="hidden sm:inline">Role & Tier:</span>
@@ -212,11 +209,7 @@ export default function HeaderBar() {
                   ].map((r) => (
                     <button
                       key={r.id}
-                      onClick={() => {
-                        setRole(r.id);
-                        setDropdownOpen(false);
-                        router.push(`/${r.id}/dashboard`);
-                      }}
+                      onClick={() => setDropdownOpen(false)}
                       className={`w-full flex items-center justify-between p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
                         user.role === r.id || (r.id === "learner" && user.role === "student")
                           ? "bg-[#EEF2FF] border-[#4F46E5] text-slate-900"
@@ -240,13 +233,13 @@ export default function HeaderBar() {
                 <label className="text-xs font-bold text-slate-700 block mb-1.5">Switch Plan</label>
                 <div className="space-y-1.5">
                   {[
-                    { id: "free" as SubscriptionTier, label: "Free", desc: "Limited AI & catalog" },
+                    { id: "free" as SubscriptionTier, label: "Free", desc: "Unlimited AI & free catalog" },
                     { id: "plus" as SubscriptionTier, label: "Plus", desc: "Current plan (Popular)" },
-                    { id: "pro" as SubscriptionTier, label: "Pro", desc: "Unlimited AI & 25% tutor discount" },
+                    { id: "pro" as SubscriptionTier, label: "Pro", desc: "Unlimited AI & included tutor access" },
                   ].map((p) => (
                     <button
                       key={p.id}
-                      onClick={() => setSubscriptionTier(p.id)}
+                      onClick={() => setDropdownOpen(false)}
                       className={`w-full flex items-center justify-between p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
                         user.subscriptionTier === p.id
                           ? "bg-[#EEF2FF] border-[#4F46E5] text-slate-900"

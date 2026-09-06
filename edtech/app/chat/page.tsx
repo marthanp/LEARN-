@@ -111,7 +111,7 @@ function pcmToWav(base64: string, mimeType: string) {
 }
 
 export default function ChatPage() {
-  const { user, aiMessagesCount, incrementAiMessages, resetAiMessages } = useUser();
+  const { user, resetAiMessages } = useUser();
   const [messages, setMessages] = useState<ChatMessage[]>(INITIAL_MESSAGES);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
@@ -152,6 +152,7 @@ export default function ChatPage() {
     };
   }, []);
 
+<<<<<<< HEAD
   const startNewChat = () => {
     chatSessionRef.current += 1;
     audioRef.current?.pause();
@@ -168,11 +169,14 @@ export default function ChatPage() {
 
   const maxMessages = user.subscriptionTier === "free" ? 5 : user.subscriptionTier === "plus" ? 50 : 999999;
   const isLimitReached = aiMessagesCount >= maxMessages && user.subscriptionTier === "free";
+=======
+>>>>>>> 96ebfd2 (payment)
 
   const handleSend = async (textToSend?: string) => {
     const text = textToSend || input.trim();
     if (!text || isTyping) return;
 
+<<<<<<< HEAD
     const chatSession = chatSessionRef.current;
 
     if (isLimitReached) {
@@ -180,6 +184,8 @@ export default function ChatPage() {
       return;
     }
 
+=======
+>>>>>>> 96ebfd2 (payment)
     const userMsg: ChatMessage = {
       id: `usr_${Date.now()}`,
       sender: "user",
@@ -190,8 +196,6 @@ export default function ChatPage() {
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
     setIsTyping(true);
-    incrementAiMessages();
-
     const history = messages.map((item) => ({
       role: item.sender,
       content: item.text,
@@ -356,7 +360,7 @@ export default function ChatPage() {
                 <span className="text-[#4F46E5] font-bold">✨ Unlimited Pro AI</span>
               ) : (
                 <span>
-                  Quota: <strong className="text-slate-900">{aiMessagesCount} / {maxMessages}</strong>
+                  Unlimited AI access
                 </span>
               )}
             </span>

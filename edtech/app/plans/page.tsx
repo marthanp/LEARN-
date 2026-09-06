@@ -1,70 +1,80 @@
 "use client";
 
-import { useState } from "react";
-import { Check, Zap, Crown, Sparkles, CheckCircle2, ShieldCheck, HeartHandshake } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Check, Sparkles, CheckCircle2, Smartphone } from "lucide-react";
 import { useUser, SubscriptionTier } from "@/context/user-context";
-
-const PLANS = [
-  {
-    id: "free" as SubscriptionTier,
-    name: "Free",
-    price: "0",
-    period: "month",
-    description: "Basic student starter kit",
-    popular: false,
-    features: [
-      "AI Chat (Limited - 5/day)",
-      "Access to Free Books & previews",
-      "Community Support",
-      "Standard Tutor Access",
-    ],
-  },
-  {
-    id: "plus" as SubscriptionTier,
-    name: "Plus",
-    price: "37,000",
-    period: "month",
-    description: "Ideal for active semester study",
-    popular: true,
-    features: [
-      "AI Chat (Extended - 50/day)",
-      "10% Tutor Discount",
-      "Access to All Books & e-Reader",
-      "Priority Support",
-      "Offline Reading mode",
-    ],
-  },
-  {
-    id: "pro" as SubscriptionTier,
-    name: "Pro",
-    price: "74,000",
-    period: "month",
-    description: "Maximum GPA accelerator",
-    popular: false,
-    features: [
-      "AI Chat (Unlimited GPT-4o)",
-      "25% Tutor Discount",
-      "Early Book Access & holds",
-      "Priority Support & TA line",
-      "Offline Reading & exports",
-      "Advanced Analytics",
-    ],
-  },
-];
+import { SUBSCRIPTION_PLANS } from "@/lib/plans";
 
 export default function PlansPage() {
-  const { user, setSubscriptionTier } = useUser();
+  const { user } = useUser();
   const [successToast, setSuccessToast] = useState<string | null>(null);
+  const [checkoutPlan, setCheckoutPlan] = useState<SubscriptionTier | null>(null);
+  const [provider, setProvider] = useState<"mtn" | "airtel">("mtn");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [paymentState, setPaymentState] = useState<"idle" | "processing" | "pending" | "failed" | "success">("idle");
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [infoNotice, setInfoNotice] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("reason") === "tutor-access") {
+        setInfoNotice("Booking 1-on-1 verified tutors requires an active Plus or Pro subscription. Please choose a plan below to activate tutor access.");
+      }
+    }
+  }, []);
+
+  const selectedPlan = SUBSCRIPTION_PLANS.find((plan) => plan.id === checkoutPlan);
 
   const handleSelectPlan = (tier: SubscriptionTier) => {
     if (user.subscriptionTier === tier) return;
-
-    setSubscriptionTier(tier);
-    setSuccessToast(`Plan successfully switched to ${tier.toUpperCase()}! Your new perks are now active.`);
-    setTimeout(() => {
-      setSuccessToast(null);
-    }, 3000);
+    if (tier === "free") {
+      setSuccessToast("Free plan changes are managed from your account settings.");
+      return;
+    }
+    setCheckoutPlan(tier);
+    setPaymentState("idle");
+    setPaymentError(null);
   };
+
+  const handlePayment = async () => {
+    if (!checkoutPlan) return;
+    setPaymentState("processing");
+    setPaymentError(null);
+    try {
+      const response = await fetch("/api/payments/initiate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan: checkoutPlan, provider, phoneNumber }),
+      });
+      const result = await response.json() as { reference?: string; status?: string; error?: string };
+      if (!response.ok || !result.reference) throw new Error(result.error || "Unable to start payment.");
+      setPaymentState("pending");
+
+      for (let attempt = 0; attempt < 24; attempt += 1) {
+        await new Promise((resolve) => setTimeout(resolve, 2500));
+        const statusResponse = await fetch(`/api/payments/${encodeURIComponent(result.reference)}`);
+        const status = await statusResponse.json() as { status?: string; failureReason?: string; error?: string };
+        if (status.status === "completed") {
+          setPaymentState("success");
+          setSuccessToast(`Payment verified. ${checkoutPlan.toUpperCase()} is now active.`);
+          window.location.reload();
+          return;
+        }
+        if (["failed", "expired", "cancelled"].includes(status.status || "")) {
+          throw new Error(status.failureReason || `Payment ${status.status}.`);
+        }
+      }
+      throw new Error("Payment is still pending. Check your phone and try again later.");
+    } catch (error) {
+      setPaymentState("failed");
+      setPaymentError(error instanceof Error ? error.message : "Payment failed.");
+    }
+  };
+
+  useEffect(() => {
+    if (paymentState === "success") setCheckoutPlan(null);
+  }, [paymentState]);
 
   return (
     <div className="max-w-6xl mx-auto space-y-8">
@@ -76,6 +86,22 @@ export default function PlansPage() {
           Scale your study resources with smart digital rentals, unlimited AI tutoring, and discounted 1-on-1 sessions.
         </p>
       </div>
+
+      {infoNotice && (
+        <div className="p-4 rounded-2xl bg-indigo-50 border border-indigo-200 text-indigo-900 flex items-center justify-between text-xs font-semibold shadow-xs">
+          <div className="flex items-center gap-2.5">
+            <Sparkles className="h-4 w-4 text-indigo-600 shrink-0" />
+            <span>{infoNotice}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setInfoNotice(null)}
+            className="text-xs text-indigo-600 hover:text-indigo-800 ml-2"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {successToast && (
         <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 flex items-center justify-between text-xs font-semibold shadow-xs">
@@ -89,7 +115,7 @@ export default function PlansPage() {
 
       {/* ── 3 Plans + Your Benefits Card matching Visual Plan #7 ────────────── */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
-        {PLANS.map((plan) => {
+        {SUBSCRIPTION_PLANS.map((plan) => {
           const isCurrent = user.subscriptionTier === plan.id;
 
           return (
@@ -111,7 +137,7 @@ export default function PlansPage() {
                 <div>
                   <h3 className="text-base font-bold text-slate-900">{plan.name}</h3>
                   <div className="mt-2 flex items-baseline gap-1">
-                    <span className="text-3xl font-black text-slate-900">UGX {plan.price}</span>
+                    <span className="text-3xl font-black text-slate-900">UGX {plan.amountUgx.toLocaleString("en-UG")}</span>
                     <span className="text-xs text-slate-400">/ {plan.period}</span>
                   </div>
                 </div>
@@ -138,7 +164,7 @@ export default function PlansPage() {
                       : "bg-[#4F46E5] hover:bg-[#4338CA] text-white shadow-xs"
                   }`}
                 >
-                  {isCurrent ? "Current Plan" : `Select ${plan.name}`}
+                  {isCurrent ? "Current Plan" : plan.id === "free" ? "Select Free" : `Pay with Mobile Money`}
                 </button>
               </div>
             </div>
@@ -169,11 +195,46 @@ export default function PlansPage() {
 
           <div className="pt-2 border-t border-[#C7D2FE]/60">
             <span className="text-[11px] font-semibold text-[#4F46E5]">
-              🔒 100% Student Money-Back Guarantee
+                Tutor access is included with an active LEARN+ subscription.
             </span>
           </div>
         </div>
       </div>
+
+      {selectedPlan && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-4">
+              <div>
+                <h2 className="text-lg font-extrabold text-slate-900">Pay for {selectedPlan.name}</h2>
+                <p className="mt-1 text-sm text-slate-500">UGX {selectedPlan.amountUgx.toLocaleString("en-UG")} / month</p>
+              </div>
+              <button type="button" onClick={() => setCheckoutPlan(null)} className="text-sm font-bold text-slate-400 hover:text-slate-700">Close</button>
+            </div>
+            {paymentState === "success" ? (
+              <div className="py-8 text-center text-emerald-700"><CheckCircle2 className="mx-auto h-10 w-10" /><p className="mt-3 font-bold">Payment verified and plan activated.</p></div>
+            ) : (
+              <div className="space-y-4 pt-5">
+                <div className="grid grid-cols-2 gap-2">
+                  {(["mtn", "airtel"] as const).map((item) => (
+                    <button key={item} type="button" onClick={() => setProvider(item)} className={`rounded-xl border px-3 py-3 text-sm font-bold capitalize ${provider === item ? "border-indigo-600 bg-indigo-50 text-indigo-700" : "border-slate-200 text-slate-600"}`}>
+                      {item === "mtn" ? "MTN Mobile Money" : "Airtel Money"}
+                    </button>
+                  ))}
+                </div>
+                <label className="block text-sm font-semibold text-slate-700">Uganda mobile money number
+                  <input value={phoneNumber} onChange={(event) => setPhoneNumber(event.target.value)} placeholder="0771234567" inputMode="tel" className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-3 text-sm outline-none focus:border-indigo-500" />
+                </label>
+                {paymentError && <p className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700">{paymentError}</p>}
+                <button type="button" onClick={handlePayment} disabled={paymentState === "processing" || paymentState === "pending"} className="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-3 text-sm font-bold text-white hover:bg-indigo-700 disabled:cursor-wait disabled:opacity-60">
+                  <Smartphone className="h-4 w-4" /> {paymentState === "processing" ? "Processing payment..." : paymentState === "pending" ? "Waiting for phone confirmation..." : "Pay securely"}
+                </button>
+                <p className="text-center text-[11px] text-slate-400">Sandbox payment. Your plan activates only after server verification.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
